@@ -17,6 +17,7 @@ import { bajoMinimo } from './data/inventario.js';
 import { listarClientes, deudaDe, debe } from './data/clientes.js';
 import { resumen } from './reports/analisis.js';
 import { formatear, MONEDAS } from './core/dinero.js';
+import { enPrincipal } from './core/moneda-principal.js';
 import { invalidarIndice } from './data/busqueda.js';
 
 // --- todas las pantallas se registran al importarlas ---
@@ -80,9 +81,9 @@ registrar('panel', {
         ventasHoy.onclick = () => ir('ventas');
         ventasHoy.onkeydown = (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ir('ventas'); } };
         pegar(kpis, 
-          kpi('Vendido hoy', formatear(r.vendidoUSD)),
-          kpi('Ganancia hoy', formatear(r.gananciaBrutaUSD), r.gananciaBrutaUSD >= 0 ? 'bueno' : 'malo'),
-          kpi('Por cobrar', formatear(r.porCobrarUSD), r.porCobrarUSD ? 'acento' : ''),
+          kpi('Vendido hoy', enPrincipal(r.vendidoUSD)),
+          kpi('Ganancia hoy', enPrincipal(r.gananciaBrutaUSD), r.gananciaBrutaUSD >= 0 ? 'bueno' : 'malo'),
+          kpi('Por cobrar', enPrincipal(r.porCobrarUSD), r.porCobrarUSD ? 'acento' : ''),
           ventasHoy
         );
       })

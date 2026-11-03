@@ -12,6 +12,7 @@ import { productos as catalogo } from '../data/catalogo.js';
 import { bajoMinimo } from '../data/inventario.js';
 import { turnoAbierto } from '../data/caja.js';
 import { formatear } from '../core/dinero.js';
+import { enPrincipal } from '../core/moneda-principal.js';
 import {
   resumen, porProducto, porVendedor, porDia, margenFlojo, descuentos,
   proyeccionQuiebre, costosEstimados,
@@ -139,16 +140,16 @@ async function montarReportes(nodo) {
 
     // --- lo grande ---
     caja.appendChild(el('div.kpis', {}, [
-      kpi('Vendido', formatear(r.vendidoUSD)),
-      kpi('Ganancia bruta', formatear(r.gananciaBrutaUSD), 'bueno'),
-      kpi('Gastos', formatear(r.gastosUSD), r.gastosUSD ? 'malo' : ''),
-      kpi('GANANCIA NETA', formatear(r.gananciaNetaUSD), r.gananciaNetaUSD >= 0 ? 'bueno' : 'malo'),
+      kpi('Vendido', enPrincipal(r.vendidoUSD)),
+      kpi('Ganancia bruta', enPrincipal(r.gananciaBrutaUSD), 'bueno'),
+      kpi('Gastos', enPrincipal(r.gastosUSD), r.gastosUSD ? 'malo' : ''),
+      kpi('GANANCIA NETA', enPrincipal(r.gananciaNetaUSD), r.gananciaNetaUSD >= 0 ? 'bueno' : 'malo'),
     ]));
     caja.appendChild(el('div.kpis', { style: 'margin-top:.85rem' }, [
       kpi('Ventas', String(r.cantidad)),
-      kpi('Ticket promedio', formatear(r.ticketPromedioUSD)),
+      kpi('Ticket promedio', enPrincipal(r.ticketPromedioUSD)),
       kpi('Margen', r.margenPct === null ? '—' : `${r.margenPct.toFixed(0)}%`),
-      kpi('Por cobrar', formatear(r.porCobrarUSD), r.porCobrarUSD ? 'acento' : ''),
+      kpi('Por cobrar', enPrincipal(r.porCobrarUSD), r.porCobrarUSD ? 'acento' : ''),
     ]));
 
     if (!ventas.length) {

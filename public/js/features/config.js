@@ -7,6 +7,7 @@ import { el, esc, $, fecha, pegar } from '../ui/html.js';
 import { avisar, avisarOk, avisarMal, confirmar } from '../ui/avisos.js';
 import { ref, col } from '../core/firebase.js';
 import { setDoc, getDoc, getDocs, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { monedaPrincipal, guardarMonedaPrincipal } from '../core/moneda-principal.js';
 import { cargarTasas, guardarTasas, sugerirTasas, hoyISO, baseBs, guardarBaseBs, BASES_BS, tasasFijas, fijarTasa } from '../data/tasas.js';
 import { pendientes, aprobar, descartar } from '../data/sinonimos.js';
 import { turnosAbiertos } from '../data/caja.js';
@@ -114,6 +115,7 @@ async function pintarTasas(caja) {
   caja.innerHTML = '';
   pegar(caja, 
     el('h2', { texto: 'Tasas de hoy' }),
+    cajaMonedaPrincipal(),
     el('p', {
       style: 'color:var(--texto-suave);font-size:var(--t-cuerpo)',
       texto: actual?.deHoy
@@ -848,4 +850,21 @@ function pintarVersion(caja) {
       },
     })
   );
+}
+
+// --- moneda en que se ven las ganancias ---------------------------------------
+function cajaMonedaPrincipal() {
+  const actual = monedaPrincipal();
+  const selector = el('select', {}, Object.values(MONEDAS).map((m) =>
+    el('option', { value: m.codigo, texto: `${m.nombre} (${m.simbolo})`, ...(m.codigo === actual ? { selected: '' } : {}) })));
+  selector.onchange = () => {
+    guardarMonedaPrincipal(selector.value);
+    avisarOk('Listo. El panel ahora muestra tus ganancias en esa moneda.');
+  };
+  return el('div.campo', {}, [
+    el('label', { texto: 'Moneda en que ves tus ganancias' }),
+    selector,
+    el('p', { style: 'color:var(--texto-suave);font-size:var(--t-pie)',
+      texto: 'Solo cambia cómo se ven las cifras del panel. Los cobros y las deudas siguen en la moneda en que se hicieron.' }),
+  ]);
 }
