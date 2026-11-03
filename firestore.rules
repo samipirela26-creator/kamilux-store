@@ -209,6 +209,15 @@ service cloud.firestore {
         allow read, create, update: if delEquipo();
         allow delete: if esDueno();
       }
+      // --- San: es plata ajena y lo lleva el dueño ---
+      match /sanes/{id} {
+        allow read, create, update: if esDueno();
+        allow delete: if esDueno();
+      }
+      match /san_movs/{id} {
+        allow read, create: if esDueno();
+        allow update, delete: if false;
+      }
       match /abonos/{id} {
         allow read: if delEquipo();
         allow create: if delEquipo() && soyYo();
