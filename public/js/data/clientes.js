@@ -20,7 +20,8 @@ import { normalizar } from '../core/texto.js';
 import { LUGAR_VENTAS, debe } from '../core/dinero.js';
 import { anotar } from './auditoria.js';
 import { encolar } from './cola.js';
-import { traer, SERVIDOR } from './lectura.js';
+import { traer, SERVIDOR, CACHE } from './lectura.js';
+import { aplicarPago, faltaDe } from '../core/credito.js';
 
 export async function guardarCliente({ nombre, telefono = '', nota = '' }, id = null) {
   const documento = id ? ref('clientes', id) : refNuevo('clientes');
@@ -79,6 +80,22 @@ export async function registrarAbono({
 }) {
   const u = usuarioActual();
   const lote = writeBatch(db);
+  // Si el cliente tiene planes de cuotas abiertos, el abono baja primero la
+  // cuota más vieja del plan más viejo. De la caché, que es instantánea: un
+  // cobro no puede esperar la señal.
+  let porAplicar = montoUSD;
+  const abiertos = await traer(
+    query(col('creditos'), where('clienteId', '==', clienteId), where('estado', '==', 'abierto')), CACHE,
+  ).catch(() => []);
+  abiertos.sort((a, b) => (a.ts?.seconds || 0) - (b.ts?.seconds || 0));
+  for (const cr of abiertos) {
+    if (porAplicar <= 0) break;
+    const falta = cr.cuotas.reduce((t, c) => t + faltaDe(c), 0);
+    const cuotas = aplicarPago(cr.cuotas, porAplicar);
+    porAplicar -= Math.min(falta, porAplicar);
+    const saldada = cuotas.every((c) => faltaDe(c) === 0);
+    lote.set(ref('creditos', cr.id), { cuotas, estado: saldada ? 'saldado' : 'abierto' }, { merge: true });
+  }
   lote.set(refNuevo('abonos'), {
     clienteId, montoUSD, montoCOP, pagos, nota, lugar,
     uid: u.uid, nombreUsuario: u.nombre, ts: serverTimestamp(),
@@ -103,4 +120,9 @@ export async function abonosEntre(desde, hasta, { fuente = SERVIDOR } = {}) {
 
 export async function abonosDe(clienteId, { fuente = SERVIDOR } = {}) {
   return traer(query(col('abonos'), where('clienteId', '==', clienteId), orderBy('ts', 'desc')), fuente);
+}
+
+/** Los planes de cuotas que siguen abiertos (para saber qué toca cobrar). */
+export async function creditosAbiertos({ fuente = SERVIDOR } = {}) {
+  return traer(query(col('creditos'), where('estado', '==', 'abierto')), fuente);
 }

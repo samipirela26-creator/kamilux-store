@@ -27,6 +27,7 @@ import { icono } from '../ui/iconos.js';
 import { registrarVenta } from '../data/ventas.js';
 import { turnoAbierto } from '../data/caja.js';
 import { listarClientes, guardarCliente, deudaDe } from '../data/clientes.js';
+import { pedirCredito } from './credito-dialog.js';
 import { CACHE } from '../data/lectura.js';
 import { puede } from '../core/sesion.js';
 import { leer, escribir, observar } from '../core/estado.js';
@@ -956,7 +957,7 @@ async function cobrar() {
   // al volver la señal, nueve ventas iguales dentro de 15 milisegundos.
   let cobrando = false;
 
-  async function terminar(moneda, monto, { fiadoA = null } = {}) {
+  async function terminar(moneda, monto, { fiadoA = null, abono = [], credito = null } = {}) {
     if (cobrando) return;
     cobrando = true;
     // Que se VEA que está cobrando, o el que atiende vuelve a tocar con razón.
@@ -974,7 +975,7 @@ async function cobrar() {
       // Los botones de moneda pagan la venta ENTERA, así que este pago la
       // cubre: su valor en dólares es el de la venta, no uno recalculado que
       // puede caer a un centavo y dejar un saldo que nadie debe.
-      const pagos = fiadoA ? [] : [crearPago(moneda, monto, tasas, { montoUSD: totalUSD() })];
+      const pagos = fiadoA ? abono : [crearPago(moneda, monto, tasas, { montoUSD: totalUSD() })];
       const { id, venta } = await registrarVenta({
         lineas, pagos,
         ajusteUSD: ajusteUSD(),
@@ -984,6 +985,7 @@ async function cobrar() {
         totalCOP: monedaMonto === 'COP' ? montoCobrado : null,
         clienteId: fiadoA?.id || null,
         fiado: !!fiadoA,
+        credito,
         sinTurno: !turno,
       });
       d.close();
@@ -1018,11 +1020,15 @@ async function cobrar() {
     el('p', { style: 'color:var(--texto-suave);font-size:var(--t-pie);margin-top:1rem', texto: '¿Con qué te pagó?' }),
     botonesMoneda,
     !puede('fiar') ? null : el('button.btn.plano.ancho', {
-      style: 'margin-top:.25rem', texto: 'Dejarlo fiado',
+      style: 'margin-top:.25rem', texto: 'Dejarlo a crédito / fiado',
       onclick: async () => {
         const elegido = await elegirCliente();
         if (!elegido) return;
-        terminar(null, 0, { fiadoA: elegido });
+        // Abono inicial, recargo y cuotas. Si se cancela, no se fía nada.
+        const cond = await pedirCredito({ totalUSD: totalUSD(), tasas, cliente: elegido });
+        if (!cond) return;
+        if (cond.sinSaldo) return avisarMal('Con ese abono no queda saldo: cóbralo normal.');
+        terminar(null, 0, { fiadoA: elegido, abono: cond.pagos, credito: cond.credito });
       },
     }),
     el('button.btn.callado.ancho', { style: 'margin-top:.5rem', texto: 'Cancelar', onclick: () => d.close() })

@@ -18,7 +18,8 @@ import {
 } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { usuarioActual, esDueno } from '../core/sesion.js';
 import { registrarMovimientos } from './inventario.js';
-import { totalesVenta, totalPagadoUSD, LUGAR_VENTAS, LUGAR_AFUERA } from '../core/dinero.js';
+import { totalesVenta, totalPagadoUSD, LUGAR_VENTAS, LUGAR_AFUERA, desdeUSD } from '../core/dinero.js';
+import { calcularCredito } from '../core/credito.js';
 import { anotar } from './auditoria.js';
 import { leer } from '../core/estado.js';
 import { encolar } from './cola.js';
@@ -32,6 +33,8 @@ import { traer, SERVIDOR } from './lectura.js';
 export async function registrarVenta({
   lineas, pagos, vuelto = null, ajusteUSD = 0, ajustadoPor = null, totalCOP = null,
   clienteId = null, fiado = false, nota = '', sinTurno = false,
+  // Condiciones del crédito: { recargoPct, modo, semanas, primerCobro }. Solo con fiado.
+  credito = null,
 }) {
   const u = usuarioActual();
   if (!lineas?.length) throw new Error('La venta no tiene productos.');
@@ -40,6 +43,19 @@ export async function registrarVenta({
   const totales = totalesVenta(lineas);
   const ajuste = Math.round(ajusteUSD || 0);
   const pagadoUSD = totalPagadoUSD(pagos);
+
+  // Crédito: el plan se calcula UNA vez, aquí, y queda fijo. El recargo se suma
+  // a lo que debe (`saldoUSD`) pero también se guarda aparte, para poder
+  // separar la mercancía del interés en los reportes.
+  const plan = fiado && clienteId && credito
+    ? calcularCredito({
+      totalUSD: totales.totalUSD + ajuste, abonoUSD: pagadoUSD,
+      recargoPct: credito.recargoPct, modo: credito.modo,
+      semanas: credito.semanas, primerCobro: credito.primerCobro,
+    })
+    : null;
+  const tasaCOP = (leer('tasas') || {}).COP || 0;
+  const recargoUSD = plan?.recargoUSD || 0;
 
   const venta = {
     numero: Date.now(),
@@ -86,7 +102,13 @@ export async function registrarVenta({
     // pagaron y el faltante era del tamaño del vuelto.
     vuelto: vuelto ? { moneda: vuelto.moneda, monto: vuelto.monto, montoUSD: vuelto.montoUSD } : null,
     vueltoUSD: vuelto?.montoUSD || 0,
-    saldoUSD: totales.totalUSD + ajuste - pagadoUSD,   // > 0 = quedó debiendo
+    saldoUSD: totales.totalUSD + ajuste - pagadoUSD + recargoUSD,   // > 0 = quedó debiendo
+    recargoUSD,
+    recargoCOP: recargoUSD && tasaCOP ? desdeUSD(recargoUSD, 'COP', tasaCOP) : 0,
+    credito: plan ? {
+      abonoUSD: plan.abonoUSD, recargoPct: Number(credito.recargoPct) || 0, modo: credito.modo || 'unico',
+      semanas: credito.semanas || 0, primerCobro: credito.primerCobro || null,
+    } : null,
     fiado: !!fiado,
     // Se vendió sin caja abierta: queda escrito en la venta para poder
     // encontrarlas después. Sin esta marca son invisibles.
@@ -147,6 +169,16 @@ export async function registrarVenta({
     }, { merge: true });
   }
 
+  // El plan de cuotas vive en su propio documento, con el mismo id de la venta,
+  // para poder listar "qué toca cobrar" sin leer todas las ventas.
+  if (plan?.cuotas.length) {
+    lote.set(ref('creditos', documento.id), {
+      ventaId: documento.id, clienteId, estado: 'abierto',
+      totalUSD: plan.totalUSD, abonoUSD: plan.abonoUSD, recargoUSD: plan.recargoUSD,
+      cuotas: plan.cuotas, ts: serverTimestamp(),
+    });
+  }
+
   // No se espera: si no hay señal, Firestore la encola y la sube después.
   const subida = encolar(lote.commit(), 'venta');
 
@@ -183,6 +215,12 @@ export async function registrarVenta({
  * convierte con la tasa del día.
  */
 export function deudaEnPesos(venta) {
+  // Con recargo, la proporción se saca de la mercancía que quedó sin pagar y el
+  // recargo se suma aparte, ya en pesos.
+  if (venta.recargoUSD > 0) {
+    const base = deudaEnPesos({ ...venta, saldoUSD: venta.saldoUSD - venta.recargoUSD, recargoUSD: 0 });
+    return base + (venta.recargoCOP || 0);
+  }
   const tasaCOP = (leer('tasas') || {}).COP || 0;
   // Si la venta se cobró en pesos, ese es el número que se acordó —ya
   // redondeado— y no hay nada que recalcular.
@@ -364,6 +402,9 @@ export async function anularVenta(ventaId, motivo, venta) {
     anuladaPor: u.nombre,
     anuladaTs: serverTimestamp(),
   }, { merge: true });
+
+  // Y si tenía plan de cuotas, el plan se cierra con ella.
+  if (venta?.credito) lote.set(ref('creditos', ventaId), { estado: 'anulado' }, { merge: true });
 
   // Si era fiada, la deuda se va con ella. Sin esto, anular una venta fiada
   // dejaba al cliente debiendo una mercancía que devolvió.

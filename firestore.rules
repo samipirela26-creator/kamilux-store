@@ -204,6 +204,11 @@ service cloud.firestore {
         allow create, update: if delEquipo();
         allow delete: if esDueno();
       }
+      // Plan de cuotas de un crédito. Lo crea la venta y lo baja cada abono.
+      match /creditos/{id} {
+        allow read, create, update: if delEquipo();
+        allow delete: if esDueno();
+      }
       match /abonos/{id} {
         allow read: if delEquipo();
         allow create: if delEquipo() && soyYo();
