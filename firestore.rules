@@ -1,0 +1,247 @@
+rules_version = '2';
+
+// Mis Detallitos — reglas de seguridad.
+//
+// Principio: el EMPLEADO nunca debe poder leer costos ni ganancias. Firestore no
+// puede filtrar campos, así que el empleado NO lee `productos` (que tiene
+// costoUSD): lee el espejo `productos_venta`, que se escribe sin los campos
+// sensibles. Ocultarlo en la interfaz no sirve de nada: con la consola del
+// navegador cualquiera lee lo que el cliente descargó.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /negocios/{negocioId} {
+
+      function miDoc() {
+        return get(/databases/$(database)/documents/negocios/$(negocioId)/usuarios/$(request.auth.uid));
+      }
+      function autenticado() {
+        return request.auth != null;
+      }
+      // Las cuentas del demo llevan la marca `demo` en el token (la pone
+      // scripts/sembrar-demo.mjs). Solo valen dentro de `negocios/demo`: en
+      // cualquier otro negocio son como un extraño, aunque estén autenticadas.
+      function demoFueraDeSuNegocio() {
+        return autenticado() && request.auth.token.get('demo', false) == true && negocioId != 'demo';
+      }
+      function miRol() {
+        return autenticado() && !demoFueraDeSuNegocio() && exists(/databases/$(database)/documents/negocios/$(negocioId)/usuarios/$(request.auth.uid))
+          ? miDoc().data.rol : 'ninguno';
+      }
+      function esDueno()    { return miRol() == 'dueno'; }
+      function esEmpleado() { return miRol() == 'empleado' && miDoc().data.activo == true; }
+      function delEquipo()  { return esDueno() || esEmpleado(); }
+      function soyYo()      { return request.auth.uid == request.resource.data.uid; }
+
+      allow read: if delEquipo();
+      allow write: if false;
+
+      // --- usuarios ---
+      //
+      // Quien recibe el link puede registrarse solo, PERO su cuenta nace
+      // apagada: `rol: 'empleado'` y `activo: false`. Mientras esté apagada no
+      // puede leer ni el catálogo ni nada (ver `esEmpleado()`, que exige
+      // activo == true). Encenderla es un toque del dueño.
+      //
+      // Lo que esto impide: que alguien que consiga el link se meta a ver las
+      // ventas, y que un empleado se ascienda a dueño editando su propio
+      // documento.
+      match /usuarios/{uid} {
+        function soyEsteUsuario() { return request.auth != null && request.auth.uid == uid && !demoFueraDeSuNegocio(); }
+
+        // El que está en espera tiene que poder leer SU propio documento, si no
+        // la app no sabría que está esperando.
+        allow read: if delEquipo() || soyEsteUsuario();
+
+        allow create: if soyEsteUsuario()
+          && request.resource.data.rol == 'empleado'
+          && request.resource.data.activo == false
+          && request.resource.data.keys().hasOnly(['nombre', 'email', 'rol', 'activo', 'creado']);
+
+        allow update: if esDueno()
+          || (soyEsteUsuario()
+              && !request.resource.data.diff(resource.data).affectedKeys()
+                   .hasAny(['rol', 'activo', 'pinHash']));
+
+        allow delete: if esDueno();
+      }
+
+      // --- configuración y tasas (lectura pública para catálogo de clientes) ---
+      match /config/{doc} {
+        allow read: if true;
+        allow write: if esDueno();
+      }
+      match /tasas/{fecha} {
+        allow read: if true;
+        allow create, update: if esDueno();   // la tasa la fija el dueño
+        allow delete: if false;
+      }
+
+      // --- cosas del equipo: las lee quien trabaja aquí, NO el público ---
+      //
+      // Aquí vive el hash del PIN. Estaba en `config/`, que es de lectura
+      // pública, y de un PIN de 4 dígitos se saca el número a partir del hash.
+      // El empleado sí tiene que poder leerlo: es su app la que verifica.
+      match /equipo/{doc} {
+        allow read: if delEquipo();
+        allow write: if esDueno();
+      }
+
+      // El marcador de quién tiene la gaveta abierta. Lo escribe cualquiera del
+      // equipo porque el empleado abre y cierra su propio turno; no lleva
+      // cifras de dinero, solo el nombre y el día.
+      match /equipo/turno {
+        allow read, write: if delEquipo();
+      }
+
+      // --- secretos (llaves de servicios): SOLO el dueño ---
+      //
+      // Va aparte de `config/` a propósito: ese es de lectura pública porque lo
+      // necesita el catálogo de clientes, y una llave de API ahí la podría leer
+      // cualquiera. Aquí ni el empleado entra.
+      match /secretos/{doc} {
+        allow read, write: if esDueno();
+      }
+
+      // --- catálogo con costos: SOLO el dueño ---
+      match /productos/{id} {
+        allow read: if esDueno();
+        allow create, delete: if esDueno();
+
+        // El empleado puede mover SOLO el stock, y nada más.
+        //
+        // Al vender, la app descuenta el stock en el mismo lote que graba la
+        // venta. Con la regla vieja ("todo es del dueño") ese lote se caía
+        // entero y la venta del empleado NO se guardaba — en silencio, porque
+        // el commit no se espera. Abraham habría vendido todo un día creyendo
+        // que quedaba registrado.
+        //
+        // Precio, costo y nombre siguen siendo intocables para él: solo pasan
+        // los cambios que tocan el stock.
+        allow update: if esDueno()
+          || (esEmpleado()
+              && request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['stock', 'actualizado', 'tieneFoto', 'fotoPendiente']));
+      }
+
+      // --- espejo sin costos: lo ve el empleado y los clientes en el catálogo público ---
+      match /productos_venta/{id} {
+        allow read: if true;
+        allow create, delete: if esDueno();
+        // Igual que arriba: el espejo también lleva el stock, y se escribe en
+        // el mismo lote de la venta.
+        allow update: if esDueno()
+          || (esEmpleado()
+              && request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['stock', 'actualizado', 'tieneFoto', 'fotoPendiente']));
+      }
+
+      // --- fotos de productos ---
+      match /fotos/{productoId} {
+        allow read: if true;
+        // El empleado también toma fotos: es el que está en el mostrador con
+        // el producto en la mano. Una foto no revela nada del negocio.
+        allow write: if delEquipo();
+      }
+
+      // --- ledger de inventario: append-only, nunca se edita ni se borra ---
+      match /movimientos/{id} {
+        allow read: if esDueno();
+        allow create: if delEquipo() && soyYo();
+        allow update, delete: if false;
+      }
+
+      // --- ventas: el empleado crea; anular es del dueño ---
+      match /ventas/{id} {
+        allow read: if esDueno() || (esEmpleado() && resource.data.uid == request.auth.uid);
+        allow create: if delEquipo() && soyYo()
+                      && request.resource.data.estado == 'ok';
+        allow update: if esDueno();
+        allow delete: if false;
+      }
+      match /anulaciones/{id} {        // el empleado PIDE, el dueño aprueba
+        allow read: if delEquipo();
+        allow create: if delEquipo() && soyYo();
+        allow update: if esDueno();
+        allow delete: if false;
+      }
+
+      // --- gastos ---
+      match /gastos/{id} {
+        allow read: if esDueno() || (esEmpleado() && resource.data.uid == request.auth.uid);
+        allow create: if delEquipo() && soyYo();
+        allow update, delete: if esDueno();
+      }
+
+      // --- la plata del dueño: entradas, salidas y traslados ---
+      //
+      // Aquí está cuánto dinero hay, dónde está guardado y en qué se va. Al
+      // empleado no le incumbe y, sobre todo, de aquí se deduce la ganancia.
+      match /ingresos/{id} {
+        allow read, create, update, delete: if esDueno();
+      }
+      match /retiros/{id} {
+        allow read, create, update, delete: if esDueno();
+      }
+      match /traslados/{id} {
+        allow read, create, update, delete: if esDueno();
+      }
+
+      // --- caja / turnos: una vez cerrada, intocable ---
+      match /cajas/{id} {
+        allow read: if esDueno() || (esEmpleado() && resource.data.uid == request.auth.uid);
+        allow create: if delEquipo() && soyYo();
+        allow update: if esDueno()
+          || (esEmpleado() && resource.data.uid == request.auth.uid
+              && resource.data.estado == 'abierta');
+        allow delete: if false;
+      }
+
+      // --- clientes y deudas ---
+      match /clientes/{id} {
+        allow read: if delEquipo();
+        allow create, update: if delEquipo();
+        allow delete: if esDueno();
+      }
+      match /abonos/{id} {
+        allow read: if delEquipo();
+        allow create: if delEquipo() && soyYo();
+        allow update, delete: if esDueno();
+      }
+
+      // --- auditoría: solo el dueño la lee, nadie la modifica ---
+      match /auditoria/{id} {
+        allow read: if esDueno();
+        allow create: if delEquipo() && soyYo();
+        allow update, delete: if false;
+      }
+
+      // --- sinónimos que la app va aprendiendo ---
+      match /sinonimos_pendientes/{id} {
+        allow read: if delEquipo();
+        allow create: if delEquipo() && soyYo();
+        allow update, delete: if esDueno();
+      }
+
+      // --- pendientes del empleado ---
+      // Las plantillas las define el dueño; el equipo las lee. Las marcas de
+      // cada día las crea y borra el equipo (id `{dia}_{pendienteId}`), siempre
+      // con su propio uid.
+      match /pendientes/{id} {
+        allow read: if delEquipo();
+        allow write: if esDueno();
+      }
+      match /pendientes_hechos/{id} {
+        allow read: if delEquipo();
+        allow create: if delEquipo() && soyYo();
+        allow update: if esDueno();
+        allow delete: if delEquipo();
+      }
+
+      match /{documento=**} {
+        allow read, write: if false;
+      }
+    }
+  }
+}

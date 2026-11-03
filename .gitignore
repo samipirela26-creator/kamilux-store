@@ -1,0 +1,11 @@
+node_modules/
+.firebase/
+*-debug.log
+.env
+*.local
+.secretos/
+*firebase-adminsdk*.json
+public/js/core/firebase-config.js
+respaldo-*/
+respaldo-*.json
+.venv/

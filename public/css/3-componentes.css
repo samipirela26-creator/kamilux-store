@@ -1,0 +1,255 @@
+/* 3-componentes.css — piezas reutilizables. */
+
+.tarjeta {
+  background: var(--superficie);
+  border-radius: var(--r);
+  border: 0;
+  padding: 1.15rem 1.25rem;
+  transition: transform .15s ease;
+}
+.tarjeta + .tarjeta { margin-top: .75rem; }
+/* Bloques de color llenos: el texto encima SIEMPRE en negro/oscuro legible. */
+.tarjeta.marca { background: var(--marca); border-radius: var(--r-bloque); color: var(--sobre-marca-fuerte); }
+.tarjeta.marca h2 { color: var(--sobre-marca-fuerte); }
+.tarjeta.marca p, .tarjeta.marca .pie { color: var(--sobre-marca-fuerte); opacity: .9; }
+.tarjeta.marca .btn { background: #0c1e24; color: #ffffff; border-color: transparent; }
+.tarjeta.amarilla { background: var(--amarillo); border-radius: var(--r-bloque); color: #0c1e24; }
+.tarjeta.amarilla h2 { color: #0c1e24; }
+.tarjeta.amarilla p, .tarjeta.amarilla .pie { color: #4a3a00; font-weight: 500; }
+.tarjeta.amarilla .btn { background: #0c1e24; color: #ffffff; border-color: transparent; }
+.tarjeta.tinta { background: var(--tinta); border-radius: var(--r-bloque); color: var(--sobre-tinta); }
+.tarjeta.tinta p { color: var(--sobre-tinta); opacity: .72; }
+
+/* Encabezado de sección: rótulo en versales, pequeño. */
+.seccion {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 1.5rem 0 .6rem;
+}
+.seccion h2 {
+  margin: 0; font-size: var(--t-rotulo); font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--texto-suave);
+}
+.seccion .ver-todo {
+  background: none; border: 0; cursor: pointer;
+  font-family: var(--fuente-cuerpo);
+  color: var(--marca-fuerte); font-size: var(--t-pie); font-weight: 600;
+}
+.seccion .ver-todo:hover { text-decoration: underline; }
+
+.btn {
+  min-height: var(--toque);
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  padding: 0 1.25rem;
+  border: 1px solid var(--borde); border-radius: var(--pildora);
+  background: transparent; color: var(--texto);
+  font-family: var(--fuente-cuerpo);
+  font-size: var(--t-cuerpo); font-weight: 600; cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, transform .1s ease;
+}
+.btn:hover { background: var(--superficie); }
+.btn:active { transform: scale(.985); }
+.btn:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--foco); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+/* El principal es negro: una sola acción manda por pantalla. */
+.btn.principal {
+  background: var(--tinta); color: var(--sobre-tinta); border-color: transparent;
+  font-family: var(--fuente-titulo); font-size: .95rem;
+}
+.btn.principal:hover { filter: brightness(1.25); }
+.btn.acento { background: var(--marca); color: var(--sobre-marca-fuerte); border-color: transparent; }
+.btn.acento:hover { background: var(--marca-fuerte); }
+.btn.exito { background: var(--verde); color: var(--sobre-tinta); border-color: transparent; }
+.btn.peligro { background: var(--rojo); color: var(--sobre-tinta); border-color: transparent; }
+.btn.plano { background: transparent; border-color: var(--borde); color: var(--texto); }
+.btn.plano:hover { background: var(--superficie); }
+/* Tercer nivel: lo que cierra, cancela o deja para después. Sin borde y sin
+   fondo a propósito. El contorno de `.plano` es para alternativas de verdad;
+   si "Cancelar" lo lleva también, compite con ellas y el ojo tiene que leer
+   los tres botones para decidir cuál es el que quería. */
+.btn.callado { background: transparent; border-color: transparent; color: var(--texto-suave); }
+.btn.callado:hover { background: var(--superficie-2); color: var(--texto); }
+.btn.ancho { width: 100%; }
+.btn.grande { min-height: 54px; font-size: 1rem; }
+
+/* Chips de 1-Clic para POS y filtros: el activo se llena de turquesa. */
+.chips-barra { display: flex; gap: .4rem; overflow-x: auto; padding: .35rem 0 .15rem; scrollbar-width: none; }
+.chips-barra::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: .35rem;
+  min-height: 44px;   /* era 38px: es el atajo que más se toca en hora pico */
+  padding: 0 .9rem; border-radius: var(--pildora);
+  background: transparent; border: 1px solid var(--borde);
+  color: var(--texto); font-size: .8rem; font-weight: 600; cursor: pointer;
+  font-family: var(--fuente-cuerpo);
+  transition: background-color .15s ease, border-color .15s ease;
+}
+/* Seleccionado se LLENA; pasar el ratón sólo marca el borde. Si los dos se
+   llenan igual no se sabe cuál está elegido. */
+.chip[aria-pressed="true"] { background: var(--marca); border-color: transparent; color: var(--sobre-marca-fuerte); }
+.chip:hover:not([aria-pressed="true"]) { border-color: var(--marca); color: var(--marca-fuerte); }
+.chip:active { transform: scale(.97); }
+
+label { display: block; font-size: var(--t-rotulo); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--texto-suave); margin-bottom: .35rem; }
+input, select, textarea {
+  width: 100%; min-height: var(--toque);
+  padding: .55rem .95rem;
+  border: 1px solid var(--borde); border-radius: var(--r-chico);
+  background: var(--superficie); color: var(--texto);
+  font-family: inherit; font-size: var(--t-dato);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+input:focus, select:focus, textarea:focus {
+  outline: 0; border-color: var(--marca);
+  box-shadow: 0 0 0 3px var(--foco);
+}
+/* Miniatura de producto (inventario, punto de venta y buscador).
+   La clase se usaba desde el principio pero nunca tuvo regla: mientras ningún
+   producto tenía foto, el gif transparente de 1x1 no se notaba. En cuanto
+   entró la primera foto real, salió a tamaño completo y reventó la lista.
+   `flex:0 0 auto` es necesario porque las filas son flex y si no, la foto se
+   estira o se aplasta según el largo del nombre. */
+.miniatura {
+  width: 48px; height: 48px;
+  flex: 0 0 auto;
+  border-radius: var(--r-chico);
+  object-fit: cover;
+  background: var(--superficie-2);
+}
+
+/* Buscador destacado.
+   Antes era un input suelto en una fila: con el cliente enfrente no se veía
+   dónde buscar. Ahora lleva etiqueta, lupa dentro del campo y botón de borrar. */
+.buscador { position: relative; display: flex; align-items: center; }
+.buscador > input[type="search"] {
+  padding-left: 2.9rem; padding-right: 2.8rem;
+  min-height: calc(var(--toque) + .3rem);
+  font-size: 1rem;
+  border-width: 2px;
+}
+/* El aspa nativa de WebKit se pisa con la nuestra, que es más grande al dedo. */
+.buscador > input[type="search"]::-webkit-search-cancel-button { display: none; }
+.buscador-icono {
+  position: absolute; left: 1rem;
+  font-size: 1.05rem; line-height: 1;
+  pointer-events: none;
+}
+.buscador-limpiar {
+  position: absolute; right: .45rem;
+  display: flex; align-items: center; justify-content: center;
+  width: 2.6rem; height: 2.6rem; padding: 0;   /* era 2.1rem (~34px) */
+  border: 0; border-radius: 50%;
+  background: transparent; color: var(--texto-suave);
+  font-size: 1.5rem; line-height: 1; cursor: pointer;
+}
+.buscador-limpiar:hover { background: var(--superficie-2); color: var(--texto); }
+.buscador-limpiar[hidden] { display: none; }
+.pista-busqueda {
+  margin: .35rem 0 0; min-height: 1.1rem;
+  font-size: var(--t-pie); color: var(--texto-suave);
+}
+
+.campo { margin-bottom: .85rem; }
+.fila { display: flex; gap: .55rem; flex-wrap: wrap; }
+.fila > * { flex: 1 1 150px; }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: .7rem .5rem; text-align: left; border-bottom: 1px solid var(--borde-suave); }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--fuente-titulo); font-size: var(--t-rotulo); text-transform: uppercase; letter-spacing: .08em; color: var(--texto-suave); font-weight: 600; }
+td.num, th.num { text-align: right; }
+
+.etiqueta {
+  display: inline-flex; align-items: center; gap: .25rem;
+  padding: .15rem .6rem; border-radius: var(--pildora);
+  font-size: var(--t-rotulo); font-weight: 600;
+}
+/* El texto de una etiqueta va SIEMPRE en una variable que siga al fondo.
+   `.ok` llevaba el verde #0f4e35 escrito a mano: en oscuro `--verde-suave`
+   pasa a #10312a y quedaba verde oscuro sobre verde oscuro (1,45:1, ilegible).
+   Y `.alerta` llevaba `--texto`, que en oscuro es casi blanco, sobre un
+   amarillo que NO cambia: 1,46:1. Ahora 4,94 y 4,76 en claro; 8,19 y 6,93 en
+   oscuro. Ojo con `--amarillo`: es el único color igual en los dos temas, así
+   que lo que va encima tampoco puede cambiar — por eso `--sobre-amarillo`. */
+.etiqueta.ok { background: var(--verde-suave); color: var(--verde); }
+.etiqueta.alerta { background: var(--amarillo); color: var(--sobre-amarillo); }
+.etiqueta.mal { background: var(--rojo-suave); color: var(--rojo); }
+.etiqueta.info { background: var(--marca-suave); color: var(--marca-oscuro); }
+.etiqueta.acento { background: var(--amarillo-suave); color: var(--ambar); }
+
+#avisos {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--toque) + 3.5rem); z-index: 60;
+  display: flex; flex-direction: column; gap: .5rem; width: min(92vw, 400px);
+}
+.aviso {
+  padding: .8rem 1.2rem; border-radius: var(--r);
+  background: var(--tinta); color: var(--sobre-tinta); box-shadow: var(--sombra-alta);
+  font-size: var(--t-cuerpo); font-weight: 500;
+}
+.aviso.mal { background: var(--rojo); color: var(--sobre-tinta); }
+.aviso.ok { background: var(--verde); color: var(--sobre-tinta); }
+
+dialog {
+  width: min(94vw, 460px); border: 0; border-radius: var(--r-bloque);
+  padding: 1.5rem; box-shadow: var(--sombra-alta);
+  background: var(--superficie);
+  /* Un cuadro largo (el de un producto) se desliza por dentro. Antes se salía
+     de la pantalla y el dedo terminaba moviendo la lista de atrás. */
+  max-height: 90dvh; overflow-y: auto; overscroll-behavior: contain;
+}
+dialog::backdrop { background: rgba(12, 30, 36, .5); }
+
+/* Con un cuadro abierto, la pantalla de atrás se queda quieta. */
+html.con-cuadro, html.con-cuadro body { overflow: hidden; touch-action: none; }
+html.con-cuadro dialog { touch-action: auto; }
+
+.vacio { text-align: center; color: var(--texto-suave); padding: 2.5rem 1rem; }
+.cargando { text-align: center; color: var(--texto-suave); padding: 2rem; font-family: var(--fuente-titulo); }
+
+.sin-conexion {
+  display: none;
+  margin: .5rem 1.25rem 0; padding: .5rem 1rem;
+  /* Mismo caso que `.etiqueta.alerta`: amarillo fijo, así que el texto no
+     puede ser `--texto`. Y de todos los avisos de la app este es el que más
+     importa que se lea: era el ilegible en modo oscuro. */
+  background: var(--amarillo); color: var(--sobre-amarillo);
+  border: 0;
+  border-radius: var(--pildora);
+  text-align: center; font-size: var(--t-pie); font-weight: 600;
+}
+body.offline .sin-conexion { display: block; }
+
+/* Fila de interruptor: casilla + texto en el mismo renglón.
+   Va aparte porque `label` global es la etiqueta chiquita en mayúsculas de los
+   campos, y aquí el texto es una frase normal que se lee de corrido. */
+.interruptor { display: flex; align-items: center; gap: .6rem; margin: .75rem 0; cursor: pointer; }
+.interruptor input[type="checkbox"] {
+  /* 19px era imposible de acertar con el dedo. La etiqueta entera ya es
+     clicable, pero la casilla también tiene que serlo. */
+  width: 1.5rem; height: 1.5rem; min-height: 0; flex: 0 0 auto; margin: 0; padding: .4rem;
+  box-sizing: content-box;
+  accent-color: var(--marca);
+}
+.interruptor span {
+  font-size: .95rem; font-weight: 600; letter-spacing: 0;
+  text-transform: none; color: var(--texto);
+}
+
+/* Estados, como clases y no como un ternario repetido en cada pantalla.
+   El JS dice en qué estado está algo (`estadoMargen`); el color lo pone aquí,
+   que es lo único que sabe de temas claro y oscuro. */
+.estado-perdida { color: var(--rojo); }
+.estado-flojo   { color: var(--ambar); }
+.estado-bueno   { color: var(--verde); }
+.estado-sin-dato { color: var(--texto-suave); }
+
+/* La tabla del cierre Z: cuatro montos en un diálogo de 460px. Sin reparto
+   fijo, un bolívar de siete cifras empuja a las demás y la columna de la
+   diferencia —la única que de verdad se mira— queda aplastada. */
+.tabla-cierre { table-layout: fixed; width: 100%; font-size: var(--t-pie); }
+.tabla-cierre th, .tabla-cierre td { padding: .4rem .25rem; }
+.tabla-cierre th:first-child, .tabla-cierre td:first-child { width: 22%; }
+.tabla-cierre .num { font-size: var(--t-pie); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* La diferencia no se comprime ni se recorta: es la razón de esta pantalla. */
+.tabla-cierre th:last-child, .tabla-cierre td:last-child { width: 28%; overflow: visible; }

@@ -1,0 +1,172 @@
+/* 2-layout.css — estructura: cabecera, contenido y navegación flotante. */
+#app { min-height: 100dvh; display: flex; flex-direction: column; }
+
+/* Cabecera ligera: el saludo es el titular de la pantalla, no una barra aparte. */
+.barra {
+  display: flex; align-items: center; gap: .6rem;
+  flex-wrap: wrap;
+  width: 100%; max-width: var(--ancho);
+  margin: 0 auto;
+  padding: 1.35rem 1.25rem .35rem;
+}
+.barra .crece { flex: 1 1 100%; order: 5; }
+.barra .crece > div:first-child { color: var(--texto-suave); }
+.barra .saludo {
+  font-family: var(--fuente-titulo);
+  font-size: 2.6rem; font-weight: 700;
+  line-height: .96; letter-spacing: -.045em; color: var(--texto);
+}
+
+/* Las tasas: chapita turquesa pálida, en la primera fila junto al logo. */
+.barra .tasas-badge {
+  order: 2; flex: 1 1 auto;
+  display: inline-flex; align-items: center; justify-content: center; gap: .6rem;
+  min-height: 44px;   /* era 34px, y es un botón: abre las tasas */
+  padding: .3rem .85rem; border-radius: var(--pildora);
+  background: var(--marca-suave); border: 0;
+  font-size: var(--t-pie); font-weight: 600;
+  color: var(--marca-oscuro);
+  font-variant-numeric: tabular-nums;
+}
+.barra .tasas-badge span { color: var(--marca-oscuro); font-family: var(--fuente-titulo); }
+/* Tasa arrastrada de otro día: se avisa, porque cobrar toda la jornada a la
+   tasa de ayer se come el margen venta por venta y no da ningún error. */
+.barra .tasas-badge.vieja {
+  background: var(--ambar-suave);
+  border-color: var(--ambar);
+  color: var(--ambar);
+}
+.barra .tasas-badge.vieja span { color: var(--ambar); }
+
+.barra .logo-boton {
+  order: 1;
+  flex: 0 0 auto;
+  padding: 0; border: 0; background: none; cursor: pointer;
+  border-radius: 50%; line-height: 0;
+  transition: transform .12s ease, box-shadow .15s ease;
+}
+.barra .logo-boton:hover { transform: scale(1.06); }
+.barra .logo-boton:active { transform: scale(.96); }
+.barra .logo-boton:focus-visible {
+  outline: 0; box-shadow: 0 0 0 3px var(--foco);
+}
+
+.barra .logo-barra {
+  order: 1;
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 0;
+  flex: 0 0 auto;
+}
+/* El botón de Salir queda al final de la primera fila. */
+.barra > .btn.plano { order: 3; flex: 0 0 auto; }
+
+@media (max-width: 560px) {
+  .barra .saludo { font-size: 2.2rem; }
+}
+
+#contenido {
+  flex: 1;
+  width: 100%; max-width: var(--ancho);
+  margin: 0 auto;
+  padding: .75rem 1.25rem calc(var(--toque) + 5.5rem + env(safe-area-inset-bottom));
+}
+
+/* Navegación: píldora de papel sólida con los íconos, superficie limpia sin difuminado. */
+.nav {
+  position: fixed; z-index: 30;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(.85rem + env(safe-area-inset-bottom));
+  width: min(94vw, 460px);
+  display: flex; align-items: stretch; gap: .2rem;
+  padding: .4rem .45rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--pildora);
+  box-shadow: var(--sombra-alta);   /* era una sombra negra a mano: en oscuro desaparecía */
+}
+/* Cada botón se distribuye de manera simétrica dentro de la píldora. */
+.nav button {
+  flex: 1 1 0; min-width: 0;
+  min-height: 48px;
+  padding: .3rem .1rem;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  border: 0; background: transparent; cursor: pointer; border-radius: var(--pildora);
+  font-family: var(--fuente-cuerpo);
+  font-size: var(--t-rotulo); font-weight: 600; line-height: 1.15; color: var(--texto-suave);
+  overflow: hidden;
+  transition: background-color .15s ease, color .15s ease;
+}
+.nav button > span:last-child {
+  max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.nav button svg { width: 19px; height: 19px; display: block; stroke: currentColor; }
+.nav button:hover { color: var(--texto); }
+
+/* Pestaña activa: destacada en color de marca sin bloques neón agresivos */
+.nav button[aria-current="page"] {
+  color: var(--marca);
+  background: var(--marca-suave);
+  font-weight: 700;
+}
+.nav button[aria-current="page"] svg { stroke: var(--marca); }
+
+/* El botón central: Vender. Píldora principal destacada. */
+.nav button.destacado {
+  flex: 0 0 auto; min-height: 48px;
+  padding: 0 1rem;
+  margin-left: .15rem;
+  background: var(--tinta); color: var(--sobre-tinta);
+  border-radius: var(--pildora);
+  flex-direction: row; gap: .45rem;
+  font-family: var(--fuente-titulo);
+  font-size: .95rem; font-weight: 600;
+  transition: transform .12s ease, filter .12s ease;
+}
+.nav button.destacado svg { stroke: var(--sobre-tinta); width: 20px; height: 20px; }
+.nav button.destacado:hover { filter: brightness(1.2); }
+.nav button.destacado:active { transform: scale(.97); }
+
+.rejilla { display: grid; gap: 1rem; }
+@media (min-width: 760px) {
+  .rejilla.dos { grid-template-columns: 1fr 1fr; }
+  .rejilla.tres { grid-template-columns: repeat(3, 1fr); }
+  .rejilla.cuatro { grid-template-columns: repeat(4, 1fr); }
+  .rejilla.cinco { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* --- Laptop y escritorio: la navegación sube -------------------------------
+   En el teléfono la píldora de abajo es correcta: ahí está el pulgar. En una
+   laptop la mano está en el teclado y el ratón arriba, y una barra flotante
+   centrada abajo obliga a bajar el cursor a la esquina para cada cambio de
+   pantalla, encima de dejar 5,5rem de aire muerto al pie de cada página.
+
+   A partir de 900px se vuelve una fila horizontal pegada bajo el encabezado.
+   No es un rediseño: son los mismos botones, puestos donde la mano ya está. */
+@media (min-width: 900px) {
+  .nav {
+    position: sticky;
+    top: .5rem;
+    left: auto; transform: none;
+    bottom: auto;
+    width: 100%; max-width: var(--ancho);
+    margin: 0 auto 1rem;
+    justify-content: flex-start;
+    gap: .25rem;
+    border-radius: var(--r);
+  }
+  .nav button {
+    flex: 0 1 auto;
+    min-width: 92px;
+    flex-direction: row;
+    gap: .45rem;
+    padding: .3rem .9rem;
+    font-size: var(--t-pie);
+  }
+  /* Con la navegación arriba, el hueco que la píldora dejaba abajo sobra. */
+  #contenido {
+    padding-bottom: 2rem;
+  }
+  /* Los avisos ya no tienen que esquivarla. */
+  #avisos { bottom: 1.25rem; }
+}

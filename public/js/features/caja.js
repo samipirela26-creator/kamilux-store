@@ -1,0 +1,720 @@
+// caja.js — abrir turno, reporte X y cierre Z con arqueo por denominaciones.
+//
+// La idea: que el sistema compare, no la persona. El empleado cuenta billete
+// por billete, la app dice qué debería haber, y la diferencia queda escrita tal
+// cual (no se "corrige" para que cuadre).
+
+import { registrar, ir } from '../core/router.js';
+import { el, esc, $, fecha, diaISO, abrirDialogo, pegar, unSoloToque } from '../ui/html.js';
+import { avisarOk, avisarMal, confirmar } from '../ui/avisos.js';
+import {
+  DENOMINACIONES, turnoAbierto, abrirTurno, reporteX, cerrarTurno, quienTieneLaCaja,
+  turnosRecientes, sumarConteo, comoQuedoLaGaveta, turnosAbiertos, anularApertura,
+} from '../data/caja.js';
+import { MONEDAS, formatear, aMenores, aMayores } from '../core/dinero.js';
+import { detectarCambioDeMoneda, RESTO_TOLERADO } from '../core/cambio-moneda.js';
+import { entraALaGaveta } from '../core/sitios.js';
+import { leer } from '../core/estado.js';
+import { esDueno, usuarioActual } from '../core/sesion.js';
+
+registrar('caja', {
+  titulo: 'Mi caja', icono: '💵', menu: true, soloEmpleado: true, seccion: 'La plata', orden: 40,
+  montar: montarCaja,
+});
+registrar('caja-dueno', { titulo: 'Caja', icono: '💵', soloDueno: true, seccion: 'La plata', orden: 20, montar: montarCaja });
+
+// La gaveta solo tiene lo que de verdad está en la gaveta. Los bolívares
+// entran por pago móvil y se quedan en la caja fuerte (ver core/sitios.js):
+// preguntarle a alguien cuántos bolívares hay en la gaveta es pedirle un
+// número que no puede ir a mirar, y el que inventa acaba en un descuadre.
+const DE_LA_GAVETA = Object.values(MONEDAS).filter((m) => entraALaGaveta(m.codigo));
+const FUERA_DE_LA_GAVETA = Object.values(MONEDAS).filter((m) => !entraALaGaveta(m.codigo));
+
+/** Cuántos días lleva abierto un turno, contando por fecha y no por horas:
+ *  un turno abierto anoche a las 11 ya es de ayer aunque no hayan pasado 24h. */
+function diasAbierto(diaTurno) {
+  if (!diaTurno) return 0;
+  const hoy = new Date(`${diaISO()}T12:00:00`);
+  const abierto = new Date(`${diaTurno}T12:00:00`);
+  return Math.max(0, Math.round((hoy - abierto) / 86400000));
+}
+
+async function montarCaja(nodo) {
+  nodo.innerHTML = '<div class="cargando">Revisando tu turno…</div>';
+  let turno = null;
+  try {
+    turno = await turnoAbierto();
+  } catch (e) {
+    nodo.innerHTML = '';
+    return nodo.appendChild(el('div.vacio', { texto: 'No se pudo leer la caja (¿sin internet?). Puedes seguir vendiendo igual.' }));
+  }
+
+  if (!turno) {
+    // La gaveta es una sola: si otro la tiene abierta, no se muestra ni el
+    // formulario. Enseñar los campos y fallar al final del llenado es peor que
+    // decirlo de entrada.
+    const otro = await quienTieneLaCaja();
+    if (otro && otro.uid !== (usuarioActual()?.uid)) return pintarOcupada(otro);
+    return pintarApertura();
+  }
+
+  const datos = await reporteX(turno).catch(() => null);
+  // El cierre necesita saber qué debería haber para enseñarlo al lado de cada
+  // campo: sin ese número, escribir lo que hay es puro papeleo.
+  if (datos) turno.__esperado = datos.esperado;
+  nodo.innerHTML = '';
+
+  // Un turno que viene de días atrás es un turno que nadie cerró. El arqueo
+  // deja de servir: mezcla las ventas de varios días contra un fondo de otro
+  // día, y así fue como quedaron dos cajas abiertas a la vez en las pruebas.
+  // Se dice fuerte, arriba de todo, y con los días que lleva.
+  const dias = diasAbierto(turno.dia);
+  if (dias >= 1) {
+    nodo.appendChild(el('div.tarjeta', {
+      style: 'background:var(--rojo-suave);border:1px solid var(--rojo);margin-bottom:1rem',
+    }, [
+      el('h2', { style: 'color:var(--rojo);margin-top:0', texto: dias === 1 ? 'Este turno quedó abierto desde ayer' : `Este turno lleva ${dias} días abierto` }),
+      el('p', {
+        style: 'margin:.3rem 0 0',
+        texto: 'Mientras no se cierre, el arqueo mezcla las ventas de varios días contra el fondo '
+             + 'de otro día y deja de cuadrar. Ciérralo abajo y abre uno nuevo con el fondo de hoy.',
+      }),
+    ]));
+  }
+
+  nodo.appendChild(el('div.tarjeta.marca', {}, [
+    el('div', { style: 'display:flex;justify-content:space-between;align-items:center' }, [
+      el('div', {}, [
+        el('h2', { texto: 'Turno abierto' }),
+        el('div', { style: 'color:var(--texto-suave);font-size:var(--t-cuerpo)', texto: `Desde ${fecha(turno.apertura)}` }),
+      ]),
+      el('span.etiqueta.ok', { texto: turno.nombreUsuario }),
+    ]),
+  ]));
+
+  if (datos) {
+    nodo.appendChild(el('div.kpis', { style: 'margin:1rem 0' }, [
+      kpi('Ventas del turno', String(datos.cantidad)),
+      // Cobrado, no vendido: lo fiado no dejó ningún billete en la gaveta y el
+      // vuelto salió de ella. Con "vendido" aquí, la gaveta nunca cuadraba.
+      kpi('Cobrado', formatear(datos.cobradoUSD ?? datos.totalUSD)),
+      ...(datos.gastosUSD ? [kpi('Gastos del turno', formatear(datos.gastosUSD), 'malo')] : []),
+      ...(esDueno() ? [kpi('Ganancia', formatear(datos.gananciaUSD), 'bueno')] : []),
+    ]));
+
+    // "Ventas del turno: 12" invita a preguntar cuáles son, sobre todo cuando
+    // la gaveta no cuadra. Desde aquí se abren una por una.
+    if (datos.cantidad) {
+      nodo.appendChild(el('button.btn.plano.ancho', {
+        style: 'margin-bottom:1rem',
+        texto: datos.cantidad === 1 ? 'Ver esa venta' : 'Ver esas ventas, una por una',
+        onclick: () => ir(esDueno() ? 'ventas' : 'mis-ventas'),
+      }));
+    }
+
+    const tarjeta = el('div.tarjeta', {}, [el('h2', { texto: 'Debería haber en la gaveta' })]);
+    for (const [moneda, monto] of Object.entries(datos.esperado)) {
+      if (!monto) continue;
+      tarjeta.appendChild(el('div', {
+        style: 'display:flex;justify-content:space-between;padding:.45rem 0;border-bottom:1px solid var(--borde)',
+      }, [
+        el('span', { texto: MONEDAS[moneda]?.nombre || moneda }),
+        el('strong.cifra', { texto: formatear(monto, moneda) }),
+      ]));
+    }
+    // De dónde sale ese número. Sin esto, cuando la gaveta no cuadra no hay
+    // manera de saber qué entró y qué salió, y la discusión termina en quién
+    // tiene la culpa en vez de en qué movimiento falta.
+    // En dólares y sin el fondo: el fondo se cuenta moneda por moneda arriba, y
+    // sumarlo aquí a una tasa de hoy sería un número que no significa nada.
+    const partes = [
+      ['Cobrado en ventas', datos.cobradoUSD ?? 0, 'mas'],
+      ['Abonos de fiados', datos.abonadoUSD ?? 0, 'mas'],
+      ['Dinero que metiste', datos.ingresadoUSD ?? 0, 'mas'],
+      ['Llegó de otro sitio', Math.max(0, datos.trasladadoUSD ?? 0), 'mas'],
+      ['Vuelto que diste', datos.vueltoUSD ?? 0, 'menos'],
+      ['Gastos', datos.gastosUSD ?? 0, 'menos'],
+      ['Retiros', datos.retiradoUSD ?? 0, 'menos'],
+      ['Se llevó a otro sitio', Math.max(0, -(datos.trasladadoUSD ?? 0)), 'menos'],
+    ].filter(([, v]) => v);
+    const desglose = el('details', { style: 'margin-top:.75rem' }, [
+      el('summary', { style: 'cursor:pointer;color:var(--texto-suave);font-size:var(--t-pie)', texto: 'Qué entró y qué salió del turno' }),
+    ]);
+    for (const [rotulo, monto, clase] of partes) {
+      desglose.appendChild(el('div', {
+        style: 'display:flex;justify-content:space-between;font-size:var(--t-cuerpo);padding:.3rem 0',
+      }, [
+        el('span', { style: 'color:var(--texto-suave)', texto: rotulo }),
+        el('span.cifra', { texto: `${clase === 'menos' ? '−' : clase === 'mas' ? '+' : ''} ${formatear(monto)}` }),
+      ]));
+    }
+    tarjeta.appendChild(desglose);
+    // Lo vendido afuera se nombra aquí aunque no se le pida a la gaveta: si no
+    // se dice, el dueño ve "ventas 12" y "cobrado 3" y cree que falta plata.
+    if (datos.vendidoAfueraUSD) {
+      tarjeta.appendChild(el('p', {
+        style: 'font-size:var(--t-pie);color:var(--texto-suave);margin-top:.75rem',
+        texto: `De las ventas de este período, ${formatear(datos.vendidoAfueraUSD)} se vendieron `
+             + 'con la caja cerrada: esa plata no entró a la gaveta, está con quien vendió, y no '
+             + 'se cuenta en este arqueo.',
+      }));
+    }
+    tarjeta.appendChild(el('p', {
+      style: 'color:var(--texto-suave);font-size:var(--t-pie);margin-top:.75rem',
+      texto: 'Incluye el fondo con el que abriste. Esto es el reporte X: míralo las veces que quieras, no cierra nada.',
+    }));
+    nodo.appendChild(tarjeta);
+  }
+
+  nodo.appendChild(el('button.btn.principal.grande.ancho', {
+    style: 'margin-top:1rem', texto: 'Cerrar caja (contar)',
+    onclick: () => pintarCierre(turno),
+  }));
+
+  if (esDueno()) nodo.appendChild(await historial());
+
+  // --- apertura ---
+  /** Otro tiene la caja abierta: se dice quién y desde cuándo, y nada más. */
+  function pintarOcupada(otro) {
+    const hoy = otro.dia === diaISO();
+    nodo.innerHTML = '';
+    nodo.appendChild(el('div.tarjeta', { style: 'background:var(--ambar-suave);border:1px solid var(--ambar)' }, [
+      el('h1', { style: 'margin-top:0', texto: 'La caja ya está abierta' }),
+      el('p', { style: 'font-size:1.05rem', html: `<strong>${esc(otro.nombre || 'Otra persona')}</strong> la abrió ${hoy ? 'hoy' : `el ${esc(otro.dia || '')}`}.` }),
+      el('p', {
+        style: 'color:var(--texto-suave)',
+        texto: 'No se puede abrir otra mientras tanto: la gaveta es una sola, y si dos turnos '
+             + 'cuentan el mismo dinero, ninguno de los dos cuadra al cerrar. '
+             + 'Hay que cerrar ese turno primero.',
+      }),
+      el('button.btn.plano.ancho', { texto: 'Volver a mirar', onclick: () => montarCaja(nodo) }),
+      // El dueño se topa con esta pantalla justo cuando la apertura fue un
+      // error, y hasta ahora no había salida: había que pedirle al otro que
+      // cerrara un turno que nunca existió. Desde aquí se anula.
+      esDueno() ? el('button.btn.plano.ancho', {
+        style: 'margin-top:.5rem', texto: 'Esa apertura fue un error: anularla',
+        onclick: async () => {
+          const abiertos = await turnosAbiertos().catch(() => []);
+          const turnoDelOtro = abiertos.find((t) => t.id === otro.cajaId) || abiertos[0];
+          if (!turnoDelOtro) return avisarMal('No se pudo leer ese turno. Prueba otra vez.');
+          pedirAnularApertura(turnoDelOtro, () => montarCaja(nodo));
+        },
+      }) : null,
+    ]));
+  }
+
+  async function pintarApertura() {
+    nodo.innerHTML = '<div class="cargando">Buscando cómo quedó la caja…</div>';
+    // Con cuánto quedó la gaveta la última vez que se cerró. Sin esto, abrir
+    // era adivinar: la app preguntaba cuánto hay y la respuesta no estaba en
+    // ningún sitio que la persona pudiera mirar.
+    const quedo = await comoQuedoLaGaveta();
+
+    nodo.innerHTML = '';
+    const tarjeta = el('div.tarjeta', {}, [
+      el('h1', { texto: 'Abrir la caja' }),
+      el('p', { texto: '¿Con cuánto arrancas? Es el fondo para dar vuelto. Si no tienes nada, déjalo en cero.' }),
+    ]);
+
+    if (quedo) {
+      const linea = DE_LA_GAVETA
+        .filter((m) => quedo.contado[m.codigo] !== undefined && quedo.contado[m.codigo] !== null)
+        .map((m) => formatear(quedo.contado[m.codigo] || 0, m.codigo));
+      if (linea.length) {
+        tarjeta.appendChild(el('div', {
+          style: 'background:var(--fondo-suave,rgba(127,127,127,.08));border:1px solid var(--borde);'
+               + 'border-radius:.6rem;padding:.7rem;margin-bottom:.9rem',
+        }, [
+          el('div', {
+            style: 'font-size:var(--t-pie);color:var(--texto-suave)',
+            texto: `${quedo.cerradoPor || 'El último turno'} cerró${quedo.cuando ? ' el ' + fecha(quedo.cuando) : ''} y contó en la gaveta:`,
+          }),
+          el('div', { style: 'font-weight:700;margin:.25rem 0 .5rem', texto: linea.join('  ·  ') }),
+          el('button.btn.plano', {
+            style: 'min-height:36px;font-size:var(--t-pie)', texto: 'Arrancar con eso',
+            onclick: () => {
+              for (const m of DE_LA_GAVETA) {
+                const v = quedo.contado[m.codigo];
+                if (v === undefined || v === null) continue;
+                $(`#f-${m.codigo}`, nodo).value = String(aMayores(v, m.codigo));
+              }
+            },
+          }),
+          el('div', {
+            style: 'font-size:var(--t-pie);color:var(--texto-suave);margin-top:.45rem',
+            texto: 'Cuéntalo igual antes de arrancar: si hoy hay otra cosa, escribe lo que hay de verdad.',
+          }),
+        ]));
+      }
+    }
+
+    // Solo lo que está en la gaveta. Un fondo en bolívares era un número que
+    // nadie podía verificar y que al cerrar la app reclamaba como faltante.
+    for (const m of DE_LA_GAVETA) {
+      tarjeta.appendChild(el('div.campo', {}, [
+        el('label', { texto: m.nombre }),
+        el('input', { id: `f-${m.codigo}`, inputmode: 'decimal', placeholder: '0', value: '' }),
+      ]));
+    }
+
+    if (FUERA_DE_LA_GAVETA.length) {
+      tarjeta.appendChild(el('p', {
+        style: 'font-size:var(--t-pie);color:var(--texto-suave)',
+        texto: `Los ${FUERA_DE_LA_GAVETA.map((m) => m.nombre.toLowerCase()).join(' y los ')} no se preguntan aquí: `
+             + 'entran por pago móvil, no son billetes de la gaveta y se guardan aparte.',
+      }));
+    }
+
+    tarjeta.appendChild(el('button.btn.principal.grande.ancho', {
+      texto: 'Abrir turno',
+      onclick: async (ev) => {
+        // Dos clics seguidos abrían dos turnos. La transacción ya lo frena en
+        // el servidor, pero el botón tampoco debe dejar intentarlo.
+        const boton = ev.currentTarget;
+        if (boton.disabled) return;
+        boton.disabled = true;
+        boton.textContent = 'Abriendo…';
+        const fondo = {};
+        for (const m of DE_LA_GAVETA) {
+          fondo[m.codigo] = aMenores($(`#f-${m.codigo}`, nodo).value, m.codigo) || 0;
+        }
+        try {
+          await abrirTurno(fondo);
+          avisarOk('Turno abierto');
+          montarCaja(nodo);
+        } catch (e) {
+          avisarMal(e.message || 'No se pudo abrir el turno.');
+          boton.disabled = false;
+          boton.textContent = 'Abrir turno';
+        }
+      },
+    }));
+    nodo.appendChild(tarjeta);
+  }
+
+  // --- cierre con conteo por denominaciones ---
+  function pintarCierre(turno) {
+    const d = abrirDialogo('');
+    const campos = {};
+    const detalle = el('div');
+    // El aviso de cambio de moneda, mientras se cuenta: si se avisara solo en
+    // el cierre ya hecho, la persona se enteraría cuando no puede recontar.
+    const aviso = el('div');
+    let porBilletes = false;
+    const conteos = {};
+
+    // Lo que debería haber, al lado de cada campo: es la única razón por la que
+    // uno cuenta. Sin eso, escribir el número es papeleo.
+    const esperado = (turno.__esperado) || {};
+
+    // Se cuenta lo que está en la gaveta. Una moneda que no vive ahí solo
+    // aparece si un turno viejo la arrastra con saldo: si no, se le estaría
+    // pidiendo a alguien que cuente unos bolívares que están en el teléfono.
+    const aContar = Object.values(MONEDAS).filter(
+      (m) => entraALaGaveta(m.codigo) || (esperado[m.codigo] || 0) !== 0);
+
+    /** Con lo escrito hasta ahora: ¿esto se ve como un cambio de moneda? */
+    function revisarCambio() {
+      const diferencia = {};
+      for (const m of aContar) {
+        const texto = String(campos[m.codigo] ?? '').trim();
+        if (texto === '') continue;      // sin contar no se compara nada
+        diferencia[m.codigo] = (aMenores(texto, m.codigo) || 0) - (esperado[m.codigo] || 0);
+      }
+      aviso.innerHTML = '';
+      const caja = avisoDeCambio(diferencia, leer('tasas') || {});
+      if (caja) aviso.appendChild(caja);
+    }
+
+    /** La manera sencilla: un total por moneda y ya. */
+    function pintarSimple() {
+      detalle.innerHTML = '';
+      for (const m of aContar) {
+        const esp = esperado[m.codigo] || 0;
+        const campo = el('input', {
+          inputmode: 'decimal', placeholder: 'déjalo vacío si no lo contaste',
+          value: campos[m.codigo] ?? '',
+          oninput: (ev) => { campos[m.codigo] = ev.target.value; revisarCambio(); },
+        });
+        detalle.appendChild(el('div.campo', { style: 'margin-bottom:.6rem' }, [
+          el('label', { texto: m.nombre }),
+          campo,
+          el('small', {
+            style: 'color:var(--texto-suave)',
+            texto: esp ? `Debería haber ${formatear(esp, m.codigo)}` : 'No se movió en este turno',
+          }),
+        ]));
+      }
+    }
+
+    /** La manera larga, para quien sí quiere contar billete por billete. */
+    function pintarBilletes() {
+      detalle.innerHTML = '';
+      for (const m of aContar) {
+        conteos[m.codigo] = conteos[m.codigo] || {};
+        const bloque = el('details', { open: m.codigo === 'USD' ? '' : null, style: 'margin-bottom:.5rem' });
+        const total = el('strong.cifra', { texto: formatear(sumarConteo(conteos[m.codigo]), m.codigo) });
+        bloque.appendChild(el('summary', { style: 'cursor:pointer;font-weight:700;padding:.4rem 0' }, [
+          el('span', { texto: m.nombre + '  ' }), total,
+        ]));
+        for (const valor of [...DENOMINACIONES[m.codigo]].reverse()) {
+          bloque.appendChild(el('div.fila', { style: 'align-items:center;margin-bottom:.35rem' }, [
+            el('span', { style: 'flex:1', texto: formatear(valor, m.codigo) }),
+            el('input', {
+              type: 'number', min: '0', inputmode: 'numeric', placeholder: '0', style: 'flex:0 0 90px',
+              oninput: (ev) => {
+                conteos[m.codigo][valor] = Number(ev.target.value) || 0;
+                const suma = sumarConteo(conteos[m.codigo]);
+                campos[m.codigo] = String(aMayores(suma, m.codigo));
+                total.textContent = formatear(suma, m.codigo);
+                revisarCambio();
+              },
+            }),
+          ]));
+        }
+        detalle.appendChild(bloque);
+      }
+    }
+
+    pintarSimple();
+
+    const cambiar = el('button.btn.plano', {
+      style: 'min-height:36px;font-size:var(--t-pie)',
+      texto: 'Contar billete por billete',
+      onclick: () => {
+        porBilletes = !porBilletes;
+        cambiar.textContent = porBilletes ? 'Volver a escribir el total' : 'Contar billete por billete';
+        porBilletes ? pintarBilletes() : pintarSimple();
+      },
+    });
+
+    pegar(d,
+      el('h2', { texto: 'Cierre de caja' }),
+      el('p', {
+        style: 'color:var(--texto-suave);font-size:var(--t-cuerpo)',
+        texto: 'Escribe cuánto hay en la gaveta de cada moneda. Lo que no cuentes, déjalo vacío: no se toma como cero.'
+             + (FUERA_DE_LA_GAVETA.some((m) => !aContar.includes(m))
+                ? ` Los ${FUERA_DE_LA_GAVETA.map((m) => m.nombre.toLowerCase()).join(' y ')} no se cuentan aquí: no pasan por la gaveta.`
+                : ''),
+      }),
+      el('div', { style: 'max-height:52vh;overflow:auto' }, [detalle]),
+      aviso,
+      cambiar,
+      el('div.campo', { style: 'margin-top:.75rem' }, [
+        el('label', { texto: 'Nota (opcional)' }),
+        el('input', { id: 'nota-cierre', placeholder: 'Ej: saqué 20$ para el flete' }),
+      ]),
+      el('div.fila', {}, [
+        el('button.btn.callado', { texto: 'Cancelar', onclick: () => d.close() }),
+        // Un toque, un cierre. El 25/10 el cierre se escribió nueve veces:
+        // los nueve toques se quedaron esperando señal en el mismo await y al
+        // volver escribieron todos. Ver `unSoloToque` en ui/html.js.
+        el('button.btn.principal', { texto: 'Cerrar caja', onclick: unSoloToque(async () => {
+          // Solo las monedas que de verdad se escribieron. Una vacía queda
+          // fuera y el cierre la reporta como "no contada".
+          const contado = {};
+          for (const m of aContar) {
+            const texto = String(campos[m.codigo] ?? '').trim();
+            if (texto === '') continue;
+            contado[m.codigo] = aMenores(texto, m.codigo) || 0;
+          }
+          if (!Object.keys(contado).length) {
+            return avisarMal('Escribe al menos una moneda, o cancela.');
+          }
+          try {
+            const r = await cerrarTurno(turno, contado, { nota: $('#nota-cierre', d).value });
+            d.close();
+            mostrarZ(r, turno);
+          } catch (e) {
+            avisarMal('No se pudo cerrar: ' + (e.message || e));
+          }
+        }, { mientras: 'Cerrando…' }) }),
+      ])
+    );
+  }
+
+  function mostrarZ(r, turno) {
+    const d = abrirDialogo('');
+    const filas = Object.values(MONEDAS).map((m) => {
+      if ((r.noContadas || []).includes(m.codigo)) {
+        return el('tr', {
+          html: `<td>${esc(m.nombre)}</td>
+                 <td class="num">${formatear(r.esperado[m.codigo] || 0, m.codigo)}</td>
+                 <td class="num" colspan="2" style="color:var(--texto-suave)">no se contó</td>`,
+        });
+      }
+      const dif = r.diferencia[m.codigo] || 0;
+      if (!r.esperado[m.codigo] && !r.contado[m.codigo]) return null;
+      return el('tr', {
+        html: `<td>${esc(m.nombre)}</td>
+               <td class="num">${formatear(r.esperado[m.codigo] || 0, m.codigo)}</td>
+               <td class="num">${formatear(r.contado[m.codigo] || 0, m.codigo)}</td>
+               <td class="num estado-${dif === 0 ? 'bueno' : dif > 0 ? 'flojo' : 'perdida'}" style="font-weight:700">
+                 ${dif > 0 ? '+' : ''}${formatear(dif, m.codigo)}</td>`,
+      });
+    }).filter(Boolean);
+
+    const cuadra = Object.values(r.diferencia).every((x) => x === 0);
+    const tasas = leer('tasas') || {};
+    const cambio = avisoDeCambio(r.diferencia, tasas);
+    // Un cierre que solo se descuadró por un cambio de moneda cuadra en plata:
+    // decirle "cierre con diferencia" manda a buscar algo que no se perdió.
+    const soloCambio = !cuadra && detectarCambioDeMoneda(r.diferencia, tasas).soloCambio;
+    pegar(d, 
+      el('h2', { texto: cuadra ? 'Caja cuadrada'
+        : soloCambio ? 'La caja cuadra: fue un cambio de moneda'
+        : 'Cierre con diferencia' }),
+      el('p', { style: 'color:var(--texto-suave)', texto: `${r.cantidad} ventas · ${formatear(r.totalUSD)} cobrado` }),
+      // Cuatro columnas de montos en un diálogo de 460px: es el sitio más
+      // apretado de la app. `tabla-cierre` las reparte fijo y protege la
+      // columna que importa —la diferencia—, que es la única que se mira.
+      el('table.tabla-cierre', { style: 'margin:.75rem 0' }, [
+        el('thead', { html: '<tr><th>Moneda</th><th class="num">Debería</th><th class="num">Contado</th><th class="num">Dif.</th></tr>' }),
+        el('tbody', {}, filas),
+      ]),
+      cambio,
+      cuadra || soloCambio ? null : el('p', {
+        style: 'font-size:var(--t-cuerpo);color:var(--texto-suave)',
+        texto: 'Antes de pensar mal: vuelve a contar, y revisa si hubo una venta repetida, una devolución sin registrar o plata sacada de la gaveta.',
+      }),
+      el('button.btn.principal.ancho', { texto: 'Listo', onclick: () => { d.close(); montarCaja(nodo); } })
+    );
+  }
+
+  async function historial() {
+    const caja = el('div', { style: 'margin-top:1.5rem' });
+    caja.appendChild(el('div.seccion', {}, [el('h2', { texto: 'Cierres anteriores' })]));
+    const lista = await turnosRecientes(10).catch(() => []);
+    // Las anuladas también se enseñan: un turno que se abrió por error y se
+    // anuló es parte de lo que pasó en la caja, y esconderlo deja al dueño
+    // sin manera de saber si eso se repite.
+    const cerrados = lista.filter((t) => t.estado === 'cerrada' || t.estado === 'anulada');
+    if (!cerrados.length) {
+      caja.appendChild(el('div.vacio', { texto: 'Todavía no hay cierres.' }));
+      return caja;
+    }
+    const tarjeta = el('div.tarjeta', { style: 'padding:.5rem' });
+    const tasas = leer('tasas') || {};
+    for (const t of cerrados) {
+      if (t.estado === 'anulada') {
+        tarjeta.appendChild(el('div', {
+          style: 'display:flex;justify-content:space-between;align-items:center;padding:.55rem;'
+               + 'border-bottom:1px solid var(--borde);opacity:.65',
+        }, [
+          el('div', {}, [
+            el('div', { style: 'font-weight:600;text-decoration:line-through', texto: t.nombreUsuario }),
+            el('div', {
+              style: 'font-size:var(--t-pie);color:var(--texto-suave)',
+              texto: `${fecha(t.anuladaTs || t.apertura)} · ${t.motivoAnulacion || 'sin motivo escrito'}`,
+            }),
+          ]),
+          el('span.etiqueta.mal', { texto: 'apertura anulada' }),
+        ]));
+        continue;
+      }
+      const difUSD = t.diferencia?.USD || 0;
+      const cuadro = Object.values(t.diferencia || {}).every((x) => !x);
+      // Un cierre viejo que solo cambió moneda no se marca en rojo: no hubo
+      // plata perdida, y la lista es justo donde eso se malinterpretaba.
+      const fueCambio = !cuadro && detectarCambioDeMoneda(t.diferencia || {}, tasas).soloCambio;
+      tarjeta.appendChild(el('div', {
+        style: 'display:flex;justify-content:space-between;align-items:center;padding:.55rem;border-bottom:1px solid var(--borde)',
+      }, [
+        el('div', {}, [
+          el('div', { style: 'font-weight:600', texto: t.nombreUsuario }),
+          el('div', { style: 'font-size:var(--t-pie);color:var(--texto-suave)', texto: fecha(t.cierre) }),
+        ]),
+        el('div', { style: 'text-align:right' }, [
+          el('div.cifra', { style: 'font-weight:700', texto: formatear(t.ventasUSD || 0) }),
+          el('span', {
+            class: `etiqueta ${cuadro || fueCambio ? 'ok' : 'alerta'}`,
+            texto: cuadro ? 'cuadró' : fueCambio ? 'cambio de moneda' : `dif ${formatear(difUSD)}`,
+          }),
+        ]),
+      ]));
+    }
+    caja.appendChild(tarjeta);
+    return caja;
+  }
+}
+
+/**
+ * Anular una apertura de caja que fue un error.
+ *
+ * El caso real: se abre caja sin querer —a veces sin nada, de un toque de
+ * más— y a partir de ahí la gaveta queda trancada para todo el mundo, porque
+ * es una sola y el marcador dice que ya hay un turno. La única salida era
+ * cerrarla, o sea inventar un arqueo de un turno que no existió y ensuciar el
+ * libro de cierres con cifras falsas.
+ *
+ * Esto es la otra salida: el turno queda marcado como anulado, con quién lo
+ * anuló y por qué, y la gaveta se suelta. No se borra nada: el rastro queda.
+ *
+ * Se pide el motivo escrito a propósito. "Alguien anuló una apertura" sin
+ * motivo, visto dentro de tres meses, no se puede distinguir de tapar algo.
+ */
+export function pedirAnularApertura(turno, alTerminar) {
+  const d = abrirDialogo('');
+  let motivo = '';
+  const campo = el('input', {
+    placeholder: 'Por qué se anula', value: '',
+    oninput: (ev) => { motivo = ev.target.value; },
+  });
+  // Los motivos de siempre en botones: con el teléfono en la mano nadie
+  // escribe una frase, y un motivo vacío no explica nada después.
+  const MOTIVOS = ['Se abrió sin querer', 'Se abrió dos veces', 'La abrió quien no era', 'El fondo estaba mal'];
+
+  const fondo = Object.entries(turno.fondo || {})
+    .filter(([, v]) => v)
+    .map(([m, v]) => formatear(v, m)).join('  ·  ');
+
+  // Si ese turno ya alcanzó a cobrar algo, hay que decirlo ANTES: anularlo no
+  // borra esas ventas, y la plata de verdad sigue en la gaveta.
+  const aviso = el('div');
+  reporteX(turno).then((datos) => {
+    if (!datos?.cantidad) return;
+    aviso.appendChild(el('div', {
+      style: 'background:var(--ambar-suave);border:1px solid var(--ambar);border-radius:.6rem;'
+           + 'padding:.7rem;margin:.75rem 0',
+    }, [
+      el('strong', {
+        texto: datos.cantidad === 1
+          ? 'Ojo: este turno ya tiene una venta'
+          : `Ojo: este turno ya tiene ${datos.cantidad} ventas`,
+      }),
+      el('p', {
+        style: 'font-size:var(--t-cuerpo);margin:.35rem 0 0',
+        texto: `Se cobraron ${formatear(datos.cobradoUSD ?? datos.totalUSD)}. Anular la apertura no `
+             + 'borra esas ventas —quedan registradas— pero ya no las va a arquear nadie. Cuenta la '
+             + 'gaveta completa al abrir el turno nuevo: ese dinero entra como fondo.',
+      }),
+    ]));
+  }).catch(() => {});
+
+  pegar(d,
+    el('h2', { texto: 'Anular esta apertura' }),
+    el('p', {
+      style: 'font-size:var(--t-cuerpo);color:var(--texto-suave)',
+      texto: 'Para cuando la caja se abrió por error. El turno no se cierra ni se cuenta: '
+           + 'queda anulado, con tu nombre y el motivo, y la gaveta se suelta para poder abrir de nuevo.',
+    }),
+    el('div', {
+      style: 'background:var(--fondo-suave,rgba(127,127,127,.08));border:1px solid var(--borde);'
+           + 'border-radius:.6rem;padding:.7rem;margin:.5rem 0',
+    }, [
+      el('div', { style: 'font-weight:700', html: esc(turno.nombreUsuario || 'Alguien') }),
+      el('div', {
+        style: 'font-size:var(--t-pie);color:var(--texto-suave)',
+        texto: `Abrió el ${fecha(turno.apertura)}${fondo ? ` con ${fondo}` : ' sin nada'}`,
+      }),
+    ]),
+    aviso,
+    el('div.fila', { style: 'margin:.5rem 0' }, MOTIVOS.map((m) => el('button.chip', {
+      type: 'button', style: 'flex:0 1 auto', texto: m,
+      onclick: () => { motivo = m; campo.value = m; },
+    }))),
+    el('div.campo', {}, [el('label', { texto: 'Motivo' }), campo]),
+    el('div.fila', {}, [
+      el('button.btn.callado', { texto: 'Mejor no', onclick: () => d.close() }),
+      el('button.btn.peligro', {
+        texto: 'Anular la apertura',
+        onclick: async (ev) => {
+          // El botón se guarda AHORA: `ev.currentTarget` queda en null en
+          // cuanto el evento termina de repartirse, y entre medio hay un
+          // `await` esperando la confirmación.
+          const boton = ev.currentTarget;
+          motivo = (motivo || campo.value || '').trim();
+          if (!motivo) return avisarMal('Escribe por qué se anula.');
+          if (!await confirmar('¿Anular esta apertura?', {
+            detalle: 'El turno queda anulado y la gaveta se suelta. Esto no se deshace: '
+                   + 'si hacía falta un turno, hay que abrirlo otra vez con el fondo de hoy.',
+            aceptar: 'Sí, anular', cancelar: 'No', peligro: true,
+          })) return;
+          boton.disabled = true;
+          boton.textContent = 'Anulando…';
+          try {
+            await anularApertura(turno, motivo);
+            d.close();
+            avisarOk('Apertura anulada. Ya se puede abrir la caja.');
+            alTerminar?.();
+          } catch (e) {
+            avisarMal('No se pudo anular: ' + (e?.message || e));
+            boton.disabled = false;
+            boton.textContent = 'Anular la apertura';
+          }
+        },
+      }),
+    ])
+  );
+}
+
+/**
+ * El aviso de que un descuadre fue en realidad un cambio de moneda.
+ *
+ * Es el descuadre más común y el único que no es un problema: la venta es en
+ * pesos, el cliente paga con un dólar y el vuelto sale en pesos. La gaveta
+ * termina con un dólar de más y con los pesos de menos. Sin este aviso el
+ * cierre decía "faltan 20.500 pesos" y ahí empezaba la conversación fea.
+ *
+ * Devuelve null si no hay nada que decir, para poder pegarlo sin preguntar.
+ */
+function avisoDeCambio(diferencia, tasas) {
+  const r = detectarCambioDeMoneda(diferencia || {}, tasas || {});
+  if (!r.hayCambio) return null;
+
+  const caja = el('div', {
+    style: 'background:var(--ambar-suave);border:1px solid var(--ambar);border-radius:.6rem;'
+         + 'padding:.7rem;margin:.75rem 0',
+  }, [
+    el('strong', {
+      texto: r.soloCambio
+        ? 'Esto fue un cambio de moneda: no falta plata'
+        : 'Parte de esto fue un cambio de moneda',
+    }),
+  ]);
+
+  for (const par of r.pares) {
+    caja.appendChild(el('div', {
+      style: 'font-size:var(--t-cuerpo);margin-top:.35rem',
+      texto: `Sobran ${formatear(par.sobra.monto, par.sobra.moneda)} y faltan `
+           + `${formatear(par.falta.monto, par.falta.moneda)}: a la tasa de hoy es lo mismo `
+           + `(${formatear(par.usd)}).`,
+    }));
+  }
+
+  caja.appendChild(el('p', {
+    style: 'font-size:var(--t-pie);color:var(--texto-suave);margin:.5rem 0 0',
+    texto: 'Pasa cuando pagan en una moneda y el vuelto sale en otra, o cuando le cambias '
+         + 'plata a un cliente. La gaveta no perdió nada: cambió de forma.',
+  }));
+
+  // Lo que el cambio NO explica se dice aparte y con nombre propio: un aviso
+  // que tape un faltante de verdad es peor que no tener aviso.
+  if (r.faltanteUSD > RESTO_TOLERADO) {
+    caja.appendChild(el('div', {
+      style: 'font-weight:600;margin-top:.5rem',
+      texto: `Aparte del cambio falta ${formatear(r.faltanteUSD)}: eso sí hay que buscarlo.`,
+    }));
+  }
+  if (r.sobranteUSD > RESTO_TOLERADO) {
+    caja.appendChild(el('div', {
+      style: 'font-weight:600;margin-top:.5rem',
+      texto: `Aparte del cambio sobra ${formatear(r.sobranteUSD)}, y un sobrante también se revisa.`,
+    }));
+  }
+  if (r.sinTasa.length) {
+    caja.appendChild(el('div', {
+      style: 'font-size:var(--t-pie);color:var(--texto-suave);margin-top:.45rem',
+      texto: `No se pudo comparar ${r.sinTasa.map((m) => MONEDAS[m].nombre.toLowerCase()).join(' ni ')}: `
+           + 'falta cargar la tasa de hoy.',
+    }));
+  }
+  return caja;
+}
+
+function kpi(rotulo, valor, clase = '') {
+  return el(`div.kpi${clase ? '.' + clase : ''}`, {}, [
+    el('div.rotulo', { texto: rotulo }),
+    el('div.valor', { style: 'font-size:1.4rem', texto: valor }),
+  ]);
+}

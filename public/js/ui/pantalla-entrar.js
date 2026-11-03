@@ -1,0 +1,178 @@
+// Pantalla de entrada y de registro por invitación.
+//
+// El dueño reparte el link de la app. Quien lo reciba puede crearse su cuenta,
+// pero nace APAGADA: no ve nada hasta que el dueño la encienda desde
+// Configuración. Por eso el link se puede mandar por WhatsApp sin miedo.
+
+import { iniciarSesion, crearCuenta, refrescarUsuario } from '../core/sesion.js';
+import { avisarMal } from './avisos.js';
+import { modoDemo, salirDelDemo } from '../core/firebase.js';
+import { el, $, pegar } from './html.js';
+
+const MENSAJES = {
+  'auth/invalid-credential': 'Correo o clave incorrectos.',
+  'auth/invalid-email': 'Ese correo no es válido.',
+  'auth/user-not-found': 'No existe una cuenta con ese correo.',
+  'auth/wrong-password': 'La clave no es esa.',
+  'auth/too-many-requests': 'Demasiados intentos. Espera un momento.',
+  'auth/network-request-failed': 'Sin internet: la primera entrada necesita conexión.',
+  'auth/email-already-in-use': 'Ya hay una cuenta con ese correo. Entra en vez de registrarte.',
+  'auth/weak-password': 'La clave es muy corta: ponle al menos 6 caracteres.',
+  'auth/operation-not-allowed': 'El registro está cerrado. Pídele al dueño que te cree la cuenta.',
+};
+
+export function montarEntrar(nodo) {
+  // Si el link que repartió el dueño trae #/registro, abre directo el registro.
+  let modo = location.hash.includes('registro') ? 'registro' : 'entrar';
+
+  function pintar() {
+    nodo.innerHTML = '';
+    const panel = el('div.panel', {}, [
+      el('div.marca', {}, [
+        el('div.bienvenida', { texto: 'Bienvenido a' }),
+        el('img', { src: 'icons/logo.webp', width: '128', height: '128', alt: 'Mis Detallitos G&M C.A' }),
+        el('h1', { style: 'margin:.75rem 0 0', texto: 'Mis Detallitos' }),
+        el('p', { class: 'lema', texto: 'Tus ventas, tu inventario y lo que de verdad estás ganando.' }),
+      ]),
+      el('div.pie-marca', {}, [
+        el('span', { texto: 'G&M C.A.' }),
+        el('span', { texto: 'Papelería' }),
+      ]),
+      // El borde ondulado que separa la marca del formulario.
+      el('div.ola', { 'aria-hidden': 'true' }),
+    ]);
+
+    const form = el('form');
+    const caja = el('div.forma', {}, [form]);
+    pegar(nodo, el('div.login', {}, [panel, caja]));
+
+    if (modoDemo) {
+      // Demo: nadie tiene que escribir nada, se entra de un toque.
+      pegar(form,
+        el('h1', { texto: 'Probar el demo' }),
+        el('p', {
+          style: 'color:var(--texto-suave);font-size:var(--t-cuerpo);margin-top:-.5rem',
+          texto: 'Todo lo que ves aquí es inventado: productos, ventas y precios. Toca, vende, borra, haz lo que quieras.',
+        }),
+        el('div.acciones', { style: 'flex-direction:column' }, [
+          el('button.btn.principal.grande', { type: 'button', texto: 'Entrar como dueño (ve todo)', onclick: (ev) => entrarDemo(ev, 'dueno@demo.misdetallitos') }),
+          el('button.btn.grande', { type: 'button', texto: 'Entrar como empleado (sin costos)', onclick: (ev) => entrarDemo(ev, 'empleado@demo.misdetallitos') }),
+          el('button.btn.plano', { type: 'button', texto: 'Salir del demo', onclick: salirDelDemo }),
+        ])
+      );
+    } else if (modo === 'entrar') {
+      pegar(form,
+        el('h1', { texto: 'Entrar' }),
+        campo('email', 'Correo', { type: 'email', autocomplete: 'username', placeholder: 'tucorreo@gmail.com' }),
+        campo('clave', 'Clave', { type: 'password', autocomplete: 'current-password', placeholder: '••••••••' }),
+        el('div.acciones', {}, [
+          el('button.btn.principal.grande', { type: 'submit', texto: 'Entrar' }),
+          el('button.btn.plano.grande', {
+            type: 'button', texto: 'Crear cuenta',
+            onclick: () => { modo = 'registro'; pintar(); },
+          }),
+        ])
+      );
+    } else {
+      pegar(form,
+        el('h1', { texto: 'Crear mi cuenta' }),
+        el('p', {
+          style: 'color:var(--texto-suave);font-size:var(--t-cuerpo);margin-top:-.5rem',
+          texto: 'Crea tu cuenta y avísale al dueño para que te dé acceso. Hasta que él te habilite no vas a ver nada.',
+        }),
+        campo('nombre', '¿Cómo te llamas?', { autocomplete: 'name', placeholder: 'Tu nombre' }),
+        campo('email', 'Correo', { type: 'email', autocomplete: 'username', placeholder: 'tucorreo@gmail.com' }),
+        campo('clave', 'Clave', { type: 'password', autocomplete: 'new-password', placeholder: 'mínimo 6 caracteres' }),
+        el('div.acciones', {}, [
+          el('button.btn.principal.grande', { type: 'submit', texto: 'Crear cuenta' }),
+          el('button.btn.plano.grande', {
+            type: 'button', texto: 'Ya tengo cuenta',
+            onclick: () => { modo = 'entrar'; pintar(); },
+          }),
+        ])
+      );
+    }
+
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const boton = form.querySelector('button[type="submit"]');
+      const textoOriginal = boton.textContent;
+      boton.disabled = true;
+      boton.textContent = modo === 'entrar' ? 'Entrando…' : 'Creando…';
+      try {
+        if (modo === 'entrar') {
+          await iniciarSesion(form.email.value, form.clave.value);
+        } else {
+          if (!form.nombre.value.trim()) throw { code: 'sin-nombre' };
+          await crearCuenta(form.nombre.value, form.email.value, form.clave.value);
+        }
+      } catch (e) {
+        avisarMal(e.code === 'sin-nombre' ? 'Escribe tu nombre.' : (MENSAJES[e.code] || 'No se pudo. Intenta otra vez.'));
+        boton.disabled = false;
+        boton.textContent = textoOriginal;
+      }
+    });
+
+    form.querySelector('input')?.focus();
+  }
+
+  pintar();
+}
+
+async function entrarDemo(ev, email) {
+  const boton = ev.currentTarget;
+  boton.disabled = true;
+  try {
+    await iniciarSesion(email, 'demo1234');
+  } catch (e) {
+    avisarMal(MENSAJES[e.code] || 'No se pudo entrar al demo. Intenta otra vez.');
+    boton.disabled = false;
+  }
+}
+
+function campo(nombre, etiqueta, props = {}) {
+  return el('div.campo', {}, [
+    el('label', { for: nombre, texto: etiqueta }),
+    el('input', { id: nombre, name: nombre, required: '', ...props }),
+  ]);
+}
+
+/** Pantalla de "espera a que te habiliten". No muestra ni un dato del negocio. */
+export function montarEnEspera(nodo, usuario, alSalir) {
+  nodo.innerHTML = '';
+  pegar(nodo, el('div.login', {}, [
+    el('div.panel', {}, [
+      el('div.marca', {}, [
+        el('img', { src: 'icons/logo.webp', width: '110', height: '110', alt: '' }),
+        el('h1', { style: 'margin:.75rem 0 0', texto: 'Mis Detallitos' }),
+      ]),
+      el('div.ola', { 'aria-hidden': 'true' }),
+    ]),
+    el('div.forma', {}, [
+      el('div', { style: 'max-width:380px' }, [
+        el('div', { style: 'font-size:2.5rem;text-align:center', texto: '' }),
+        el('h1', { style: 'text-align:center', texto: `Hola, ${usuario.nombre}` }),
+        el('p', {
+          style: 'text-align:center;color:var(--texto-suave)',
+          texto: 'Tu cuenta quedó creada, pero el dueño todavía no te ha dado acceso. Avísale y vuelve a abrir la app.',
+        }),
+        el('p', {
+          style: 'text-align:center;color:var(--texto-suave);font-size:var(--t-pie)',
+          texto: usuario.email,
+        }),
+        el('button.btn.plano.ancho', {
+          style: 'margin-top:1rem', texto: 'Ya me habilitaron, revisar',
+          onclick: async (ev) => {
+            ev.target.textContent = 'Revisando…';
+            await refrescarUsuario();
+            // Si sigue sin acceso, el refresco no cambia de pantalla: avisamos.
+            setTimeout(() => {
+              if (document.querySelector('.login')) ev.target.textContent = 'Todavía no — revisar otra vez';
+            }, 1200);
+          },
+        }),
+        el('button.btn.plano.ancho', { style: 'margin-top:.5rem', texto: 'Salir', onclick: alSalir }),
+      ]),
+    ]),
+  ]));
+}
