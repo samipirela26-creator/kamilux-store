@@ -115,8 +115,8 @@
 .kpi.bueno .valor { color: var(--sobre-marca-fuerte); }
 .kpi.malo .valor { color: var(--rojo); }
 .kpi.acento { background: var(--amarillo); border-radius: var(--r-bloque); }
-.kpi.acento .rotulo { color: #4a3a00; }
-.kpi.acento .valor { color: #0c1e24; }
+.kpi.acento .rotulo { color: #0b0a0d; }
+.kpi.acento .valor { color: #0b0a0d; }
 
 /* Cifra enorme para totales */
 /* Estaba fija en 2.9rem. Dentro de un diálogo de min(94vw,460px) con 1.5rem de
@@ -194,7 +194,7 @@
 .estudio .nombre { font-size: 1.6rem; font-weight: 700; margin: .5rem 0; letter-spacing: -.03em; }
 .estudio .visor {
   width: 100%; max-height: 50dvh;
-  background: #0c1e24; border-radius: var(--r-bloque);
+  background: #0b0a0d; border-radius: var(--r-bloque);
 }
 .estudio .contador { color: var(--texto-suave); font-size: var(--t-cuerpo); font-weight: 500; }
 

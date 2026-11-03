@@ -563,7 +563,7 @@ async function cargarExcelJS() {
 async function descargarPlantilla() {
   const ExcelJS = await cargarExcelJS();
   const libro = new ExcelJS.Workbook();
-  libro.creator = 'Mis Detallitos';
+  libro.creator = 'Kamilux Store';
   libro.created = new Date();
 
   const MARCA = 'FF0B6A82';
@@ -792,7 +792,7 @@ async function descargarPlantilla() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'plantilla-mis-detallitos.xlsx';
+  a.download = 'plantilla-kamilux-store.xlsx';
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
   avisar('Plantilla descargada con diseño actualizado');
@@ -810,7 +810,7 @@ async function descargarPlantilla() {
 //
 // Se guarda en el aparato y no en Firestore a propósito: es una ayuda local y
 // no tiene por qué gastar lecturas ni viajar al servidor.
-const CLAVE_IMPORT = 'detallitos:ultima-importacion';
+const CLAVE_IMPORT = 'kamilux:ultima-importacion';
 
 export function recordarImportacion(importId, cuantos) {
   try {

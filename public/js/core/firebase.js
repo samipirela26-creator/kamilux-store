@@ -43,7 +43,7 @@ export const modoDemo = MODO_DEMO;
 
 /** Vuelve al negocio de verdad (quita la marca del demo y recarga limpio). */
 export function salirDelDemo() {
-  try { localStorage.removeItem('detallitos_demo'); } catch { /* da igual */ }
+  try { localStorage.removeItem('kamilux_demo'); } catch { /* da igual */ }
   location.href = location.pathname;
 }
 

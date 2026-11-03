@@ -3,9 +3,9 @@
 // `firebase-config.js` está en .gitignore a propósito: no se sube al repo.
 export const firebaseConfig = {
   apiKey: 'PEGAR_AQUI',
-  authDomain: 'mis-detallitos.firebaseapp.com',
-  projectId: 'mis-detallitos',
-  storageBucket: 'mis-detallitos.firebasestorage.app',
+  authDomain: 'kamilux-store.firebaseapp.com',
+  projectId: 'kamilux-store',
+  storageBucket: 'kamilux-store.firebasestorage.app',
   messagingSenderId: 'PEGAR_AQUI',
   appId: 'PEGAR_AQUI',
 };
@@ -16,12 +16,12 @@ export const firebaseConfig = {
 // scripts/sembrar-demo.mjs). Se recuerda en el navegador hasta "Salir del demo".
 function esModoDemo() {
   try {
-    if (new URLSearchParams(location.search).has('demo')) localStorage.setItem('detallitos_demo', '1');
-    return localStorage.getItem('detallitos_demo') === '1';
+    if (new URLSearchParams(location.search).has('demo')) localStorage.setItem('kamilux_demo', '1');
+    return localStorage.getItem('kamilux_demo') === '1';
   } catch { return false; }
 }
 export const MODO_DEMO = esModoDemo();
-export const NEGOCIO_ID = MODO_DEMO ? 'demo' : 'mis-detallitos';
+export const NEGOCIO_ID = MODO_DEMO ? 'demo' : 'kamilux';
 
 // Usar los emuladores cuando se abre en localhost (no toca los datos reales).
 export const USAR_EMULADORES = true;

@@ -1,6 +1,6 @@
-# Mis Detallitos
+# Kamilux Store
 
-PWA de ventas, inventario y **ganancia real** para la papelería Mis Detallitos
+PWA de ventas, inventario y **ganancia real** para la papelería Kamilux Store
 G&M C.A. Funciona sin internet, en el teléfono, y es gratis de mantener
 (plan Spark de Firebase).
 

@@ -32,7 +32,7 @@ export async function hashPin(pin, sal, vueltas = VUELTAS) {
   const codificador = new TextEncoder();
   const clave = await crypto.subtle.importKey('raw', codificador.encode(String(pin)), 'PBKDF2', false, ['deriveBits']);
   const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt: codificador.encode(`detallitos:${sal}`), iterations: vueltas, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt: codificador.encode(`kamilux:${sal}`), iterations: vueltas, hash: 'SHA-256' },
     clave, 256);
   return aHex(bits);
 }

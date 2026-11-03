@@ -5,7 +5,7 @@ import { el, abrirDialogo, esc, fecha, pegar } from '../ui/html.js';
 import { formatear, desdeUSD, MONEDAS } from '../core/dinero.js';
 import { avisar, avisarOk } from '../ui/avisos.js';
 
-const NEGOCIO = 'Mis Detallitos G&M C.A';
+const NEGOCIO = 'Kamilux Store';
 
 /** La fecha de la venta; si el documento no la trae todavía, la de ahora. */
 function fechaDeLaVenta(venta) {

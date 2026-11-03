@@ -54,7 +54,7 @@ async function pintar() {
   if (actual?.limpiar) { try { actual.limpiar(); } catch (e) { console.warn(e); } }
   contenedor.innerHTML = '';
   contenedor.dataset.pantalla = id;
-  document.title = p.titulo ? `${p.titulo} · Mis Detallitos` : 'Mis Detallitos';
+  document.title = p.titulo ? `${p.titulo} · Kamilux Store` : 'Kamilux Store';
   const limpiar = await p.montar(contenedor, params);
   actual = { id, limpiar: typeof limpiar === 'function' ? limpiar : null };
   document.dispatchEvent(new CustomEvent('pantalla-cambiada', { detail: { id } }));

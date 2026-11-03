@@ -1,7 +1,7 @@
 // config.js — tasas del día, PIN, sinónimos por aprobar y usuarios.
 // Todo esto es del dueño; el empleado ni ve el botón.
 
-import { temaGuardado, guardarTema } from '../ui/tema.js';
+
 import { registrar } from '../core/router.js';
 import { el, esc, $, fecha, pegar } from '../ui/html.js';
 import { avisar, avisarOk, avisarMal, confirmar } from '../ui/avisos.js';
@@ -31,7 +31,6 @@ registrar('config', {
       <div class="tarjeta" id="usuarios" style="margin-top:1rem"><div class="cargando">Cargando usuarios…</div></div>
       <div class="tarjeta" id="catalogo-config" style="margin-top:1rem"></div>
       <div class="tarjeta" id="estudio-ia" style="margin-top:1rem"></div>
-      <div class="tarjeta" id="tema" style="margin-top:1rem"></div>
       <div class="tarjeta" id="datos" style="margin-top:1rem"></div>
       <div class="tarjeta" id="version" style="margin-top:1rem"></div>`;
 
@@ -43,7 +42,6 @@ registrar('config', {
     pintarUsuarios($('#usuarios', nodo));
     pintarCatalogoConfig($('#catalogo-config', nodo));
     pintarEstudioIA($('#estudio-ia', nodo));
-    pintarTema($('#tema', nodo));
     pintarDatos($('#datos', nodo));
     pintarVersion($('#version', nodo));
   },
@@ -369,16 +367,16 @@ async function pintarSolicitudes(caja, alCambiar) {
 }
 
 /** La dirección de la app + #/registro. Incluye la subcarpeta si la hay
- *  (en GitHub Pages la app vive en /mis-detallitos/, no en la raíz). */
+ *  (en GitHub Pages la app vive en /kamilux-store/, no en la raíz). */
 function linkDeRegistro() {
   return location.href.split('#')[0] + '#/registro';
 }
 
 async function compartirLink() {
   const link = linkDeRegistro();
-  const texto = `Te paso el acceso al sistema de Mis Detallitos 🖇️\n\n${link}\n\nAbre el link, crea tu cuenta con tu correo, y avísame para habilitarte.`;
+  const texto = `Te paso el acceso al sistema de Kamilux Store 🖇️\n\n${link}\n\nAbre el link, crea tu cuenta con tu correo, y avísame para habilitarte.`;
   try {
-    if (navigator.share) { await navigator.share({ title: 'Mis Detallitos', text: texto }); return; }
+    if (navigator.share) { await navigator.share({ title: 'Kamilux Store', text: texto }); return; }
     await navigator.clipboard.writeText(texto);
     avisarOk('Link copiado: pégalo en WhatsApp');
   } catch (e) {
@@ -477,40 +475,6 @@ function pintarDatos(caja) {
 }
 
 
-// --- tema claro / oscuro -----------------------------------------------------
-function pintarTema(caja) {
-  const OPCIONES = [
-    ['auto', 'Como el teléfono'],
-    ['claro', 'Claro'],
-    ['oscuro', 'Oscuro'],
-  ];
-  caja.innerHTML = '';
-  const fila = el('div.chips-barra', { style: 'margin-top:.5rem' });
-
-  const marcar = () => {
-    const actual = temaGuardado();
-    fila.querySelectorAll('.chip').forEach((b) => {
-      b.setAttribute('aria-pressed', String(b.dataset.tema === actual));
-    });
-  };
-
-  for (const [valor, rotulo] of OPCIONES) {
-    fila.appendChild(el('button.chip', {
-      type: 'button', 'data-tema': valor, texto: rotulo,
-      onclick: () => { guardarTema(valor); marcar(); },
-    }));
-  }
-
-  pegar(caja,
-    el('h2', { texto: 'Aspecto' }),
-    el('p', {
-      style: 'color:var(--texto-suave);font-size:var(--t-cuerpo)',
-      texto: 'El oscuro cansa menos la vista de noche en el mostrador. De día, bajo el sol, se lee mejor el claro.',
-    }),
-    fila
-  );
-  marcar();
-}
 
 // --- catálogo digital y WhatsApp ----------------------------------------------
 function pintarCatalogoConfig(caja) {
@@ -814,7 +778,7 @@ function pintarDeshacerImportacion(caja) {
   try {
     // import() es asíncrono y esto se pinta de una: se lee el mismo
     // localStorage, con la misma clave, sin cargar la pantalla de importar.
-    const crudo = localStorage.getItem('detallitos:ultima-importacion');
+    const crudo = localStorage.getItem('kamilux:ultima-importacion');
     if (crudo) {
       const d = JSON.parse(crudo);
       if (d?.importId && Date.now() - (d.cuando || 0) <= 7 * 86400000) ultima = d;

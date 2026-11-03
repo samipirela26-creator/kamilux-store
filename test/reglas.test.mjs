@@ -11,8 +11,8 @@
 import { test, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-const PROY = 'mis-detallitos';
-const NEGOCIO = 'mis-detallitos';
+const PROY = 'kamilux-store';
+const NEGOCIO = 'kamilux-store';
 const AUTH = 'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1';
 const FS = `http://127.0.0.1:8080/v1/projects/${PROY}/databases/(default)/documents`;
 const NEG = `${FS}/negocios/${NEGOCIO}`;

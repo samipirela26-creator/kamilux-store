@@ -5,7 +5,7 @@ nada**: nos quedamos en el plan gratuito (Spark).
 
 ## 1. Crear el proyecto
 
-1. *Agregar proyecto* → nombre: **mis-detallitos**.
+1. *Agregar proyecto* → nombre: **kamilux-store**.
 2. Google Analytics: **desactivar**. No hace falta y mete ruido.
 
 ## 2. Registrar la app web
@@ -35,7 +35,7 @@ nada**: nos quedamos en el plan gratuito (Spark).
 3. Ubicación: **`nam5` (us-central)** o la más cercana. **No se puede cambiar
    después**, así que no le des vueltas: cualquiera de las dos sirve.
 4. Crear a mano los documentos de usuario, en la colección:
-   `negocios/mis-detallitos/usuarios/{UID}`
+   `negocios/kamilux-store/usuarios/{UID}`
    con estos campos:
 
    | campo | tipo | valor |
@@ -59,7 +59,7 @@ npx firebase login
 ```bash
 npx firebase use --add
 ```
-(elegir **mis-detallitos** y ponerle el apodo `produccion`)
+(elegir **kamilux-store** y ponerle el apodo `produccion`)
 
 ```bash
 npx firebase deploy --only firestore:rules,firestore:indexes
@@ -70,7 +70,7 @@ npx firebase deploy --only firestore:rules,firestore:indexes
 ```bash
 npx firebase deploy --only hosting
 ```
-Queda publicado en `https://mis-detallitos.web.app`. Desde el teléfono:
+Queda publicado en `https://kamilux-store.web.app`. Desde el teléfono:
 abrir ese link en Chrome → *Agregar a la pantalla de inicio*.
 
 ## Lo que NO vamos a habilitar (y por qué)

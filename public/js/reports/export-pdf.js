@@ -16,7 +16,7 @@ export async function reportePDF({ desde, hasta, resumen, porProducto = [], porV
   const ancho = doc.internal.pageSize.getWidth();
 
   doc.setFontSize(18);
-  doc.text('Mis Detallitos G&M C.A', 40, 50);
+  doc.text('Kamilux Store', 40, 50);
   doc.setFontSize(11);
   doc.setTextColor(110);
   doc.text(`Reporte del ${desde} al ${hasta}`, 40, 68);

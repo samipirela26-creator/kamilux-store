@@ -18,7 +18,7 @@ const fotos = new Map();   // productoId -> dataURL (se piden una sola vez)
 
 // El pedido a medio armar vive en el teléfono del cliente: cerrar la pestaña
 // sin querer, o entrar a WhatsApp y volver, ya no le borra lo que escogió.
-const CLAVE_PEDIDO = 'detallitos-pedido-v1';
+const CLAVE_PEDIDO = 'kamilux-pedido-v1';
 
 const contenedor = $('#contenido');
 
@@ -448,7 +448,7 @@ function abrirLoQuePideElEnlace() {
 /** Comparte el producto con la hoja del teléfono; si no hay, copia el enlace. */
 async function compartir(producto) {
   const url = enlaceDe(producto);
-  const texto = `${producto.nombre} · ${formatear(producto.precioUSD)} — Mis Detallitos`;
+  const texto = `${producto.nombre} · ${formatear(producto.precioUSD)} — Kamilux Store`;
   try {
     if (navigator.share) {
       await navigator.share({ title: producto.nombre, text: texto, url });
@@ -619,7 +619,7 @@ function abrirModalPedido() {
       const notaCliente = inputNota.value.trim();
       const totalUSD = totalPedidoUSD();
 
-      let texto = `*Nuevo Pedido - Mis Detallitos*\n`;
+      let texto = `*Nuevo Pedido - Kamilux Store*\n`;
       texto += `👤 *Cliente*: ${nombreCliente}\n`;
       if (notaCliente) texto += `📝 *Nota*: ${notaCliente}\n`;
       texto += `\n*Detalle del pedido*:\n`;

@@ -30,8 +30,8 @@ export function montarEntrar(nodo) {
     const panel = el('div.panel', {}, [
       el('div.marca', {}, [
         el('div.bienvenida', { texto: 'Bienvenido a' }),
-        el('img', { src: 'icons/logo.webp', width: '128', height: '128', alt: 'Mis Detallitos G&M C.A' }),
-        el('h1', { style: 'margin:.75rem 0 0', texto: 'Mis Detallitos' }),
+        el('img', { src: 'icons/logo.webp', width: '128', height: '128', alt: 'Kamilux Store' }),
+        el('h1', { style: 'margin:.75rem 0 0', texto: 'Kamilux Store' }),
         el('p', { class: 'lema', texto: 'Tus ventas, tu inventario y lo que de verdad estás ganando.' }),
       ]),
       el('div.pie-marca', {}, [
@@ -55,8 +55,8 @@ export function montarEntrar(nodo) {
           texto: 'Todo lo que ves aquí es inventado: productos, ventas y precios. Toca, vende, borra, haz lo que quieras.',
         }),
         el('div.acciones', { style: 'flex-direction:column' }, [
-          el('button.btn.principal.grande', { type: 'button', texto: 'Entrar como dueño (ve todo)', onclick: (ev) => entrarDemo(ev, 'dueno@demo.misdetallitos') }),
-          el('button.btn.grande', { type: 'button', texto: 'Entrar como empleado (sin costos)', onclick: (ev) => entrarDemo(ev, 'empleado@demo.misdetallitos') }),
+          el('button.btn.principal.grande', { type: 'button', texto: 'Entrar como dueño (ve todo)', onclick: (ev) => entrarDemo(ev, 'dueno@demo.miskamilux') }),
+          el('button.btn.grande', { type: 'button', texto: 'Entrar como empleado (sin costos)', onclick: (ev) => entrarDemo(ev, 'empleado@demo.miskamilux') }),
           el('button.btn.plano', { type: 'button', texto: 'Salir del demo', onclick: salirDelDemo }),
         ])
       );
@@ -144,7 +144,7 @@ export function montarEnEspera(nodo, usuario, alSalir) {
     el('div.panel', {}, [
       el('div.marca', {}, [
         el('img', { src: 'icons/logo.webp', width: '110', height: '110', alt: '' }),
-        el('h1', { style: 'margin:.75rem 0 0', texto: 'Mis Detallitos' }),
+        el('h1', { style: 'margin:.75rem 0 0', texto: 'Kamilux Store' }),
       ]),
       el('div.ola', { 'aria-hidden': 'true' }),
     ]),

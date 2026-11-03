@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Mis Detallitos — reglas de seguridad.
+// Kamilux Store — reglas de seguridad.
 //
 // Principio: el EMPLEADO nunca debe poder leer costos ni ganancias. Firestore no
 // puede filtrar campos, así que el empleado NO lee `productos` (que tiene

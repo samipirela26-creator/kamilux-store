@@ -175,7 +175,7 @@ function formula(f) {
 export async function exportarInventario(productos) {
   const ExcelJS = await cargarExcelJS();
   const libro = new ExcelJS.Workbook();
-  libro.creator = 'Mis Detallitos';
+  libro.creator = 'Kamilux Store';
   libro.created = new Date();
   const hoja = libro.addWorksheet('Inventario');
 
@@ -273,7 +273,7 @@ export async function exportarInventario(productos) {
 export async function exportarVentas(ventas, { desde, hasta, porProducto = [], porVendedor = [] }) {
   const ExcelJS = await cargarExcelJS();
   const libro = new ExcelJS.Workbook();
-  libro.creator = 'Mis Detallitos';
+  libro.creator = 'Kamilux Store';
   libro.created = new Date();
   const periodo = `${desde} a ${hasta}`;
 

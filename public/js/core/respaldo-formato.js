@@ -90,7 +90,7 @@ export function armar(datos, { negocio = '', incluyeFotos = false } = {}) {
   }
   return {
     formato: VERSION_FORMATO,
-    app: 'mis-detallitos',
+    app: 'kamilux-store',
     negocio,
     fecha: new Date().toISOString(),
     incluyeFotos,
@@ -107,7 +107,7 @@ export function armar(datos, { negocio = '', incluyeFotos = false } = {}) {
  */
 export function validar(datos) {
   if (!datos || typeof datos !== 'object') return { ok: false, error: 'El archivo no es un respaldo.' };
-  if (datos.app !== 'mis-detallitos') return { ok: false, error: 'Ese respaldo no es de esta app.' };
+  if (datos.app !== 'kamilux-store') return { ok: false, error: 'Ese respaldo no es de esta app.' };
   if (typeof datos.formato !== 'number') return { ok: false, error: 'Al archivo le falta el número de formato.' };
   if (datos.formato > VERSION_FORMATO) {
     return { ok: false, error: `El respaldo es de una versión más nueva (formato ${datos.formato}). Actualiza la app antes de restaurarlo.` };
@@ -131,6 +131,6 @@ export function validar(datos) {
 /** Nombre del archivo: que se entienda cuál es el más nuevo sin abrirlo. */
 export function nombreArchivo(fecha = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
-  return `respaldo-detallitos-${fecha.getFullYear()}-${p(fecha.getMonth() + 1)}-${p(fecha.getDate())}`
+  return `respaldo-kamilux-${fecha.getFullYear()}-${p(fecha.getMonth() + 1)}-${p(fecha.getDate())}`
     + `-${p(fecha.getHours())}${p(fecha.getMinutes())}.json`;
 }

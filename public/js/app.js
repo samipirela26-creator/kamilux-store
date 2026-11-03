@@ -285,7 +285,7 @@ function pintarCascara() {
           }, [
             el('img.logo-barra', { src: 'icons/logo-256.webp', width: '40', height: '40', alt: '' }),
           ])
-        : el('img.logo-barra', { src: 'icons/logo-256.webp', width: '40', height: '40', alt: 'Mis Detallitos G&M C.A' }),
+        : el('img.logo-barra', { src: 'icons/logo-256.webp', width: '40', height: '40', alt: 'Kamilux Store' }),
     ]),
     nav,
     contenido

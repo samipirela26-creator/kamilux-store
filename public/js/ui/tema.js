@@ -4,7 +4,7 @@
 // prefers-color-scheme, que es lo que la mayoría espera: la app sigue al
 // sistema sin que nadie toque nada.
 
-const CLAVE = 'detallitos:tema';
+const CLAVE = 'kamilux:tema';
 const TEMAS = ['auto', 'claro', 'oscuro'];
 
 export function temaGuardado() {
@@ -31,7 +31,7 @@ export function aplicarTema(tema = temaGuardado()) {
     // mano aquí y había que acordarse de cambiarlos en dos sitios.
     const estilo = getComputedStyle(document.documentElement);
     const color = (oscuro ? estilo.getPropertyValue('--fondo') : estilo.getPropertyValue('--marca')).trim();
-    meta.setAttribute('content', color || (oscuro ? '#101719' : '#0b6a82'));
+    meta.setAttribute('content', color || (oscuro ? '#0b0a0d' : '#0b0a0d'));
   }
 }
 

@@ -24,10 +24,10 @@ async function cargar() {
 const token = (nombre, respaldo) =>
   getComputedStyle(document.documentElement).getPropertyValue(nombre).trim() || respaldo;
 
-const MARCA = () => token('--marca', '#0b6a82');
-const AMARILLO = () => token('--amarillo', '#ffc400');
-const VERDE = () => token('--verde', '#1e6f4e');
-const ROJO = () => token('--rojo', '#a52a1c');
+const MARCA = () => token('--marca', '#e85fb4');
+const AMARILLO = () => token('--amarillo', '#e0b35a');
+const VERDE = () => token('--verde', '#16a56e');
+const ROJO = () => token('--rojo', '#ff8a75');
 /** El mismo turquesa de la marca, translúcido, para el relleno bajo la línea. */
 const RELLENO = () => `color-mix(in srgb, ${MARCA()} 12%, transparent)`;
 

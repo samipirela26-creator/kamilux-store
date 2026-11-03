@@ -4,7 +4,7 @@
 // la app ABRA con el catálogo completo y el buscador listo aunque no haya señal.
 // Aquí guardamos una copia del catálogo y de las fotos.
 
-const BASE = 'detallitos';
+const BASE = 'kamilux';
 const VERSION = 1;
 export const ALMACENES = { CATALOGO: 'catalogo', FOTOS: 'fotos', VARIOS: 'varios' };
 

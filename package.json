@@ -1,15 +1,15 @@
 {
-  "name": "mis-detallitos",
+  "name": "kamilux-store",
   "version": "1.0.0",
   "private": true,
-  "description": "Ventas, inventario y ganancias de la papelería Mis Detallitos G&M C.A",
+  "description": "Ventas, inventario y ganancias de la papelería Kamilux Store G&M C.A",
   "type": "module",
   "scripts": {
     "test": "node --test test/",
-    "emuladores": "firebase emulators:start --project mis-detallitos --only auth,firestore,hosting",
+    "emuladores": "firebase emulators:start --project kamilux-store --only auth,firestore,hosting",
     "sembrar": "node scripts/sembrar-emulador.mjs",
     "reglas": "node --test test/reglas.test.mjs",
-    "publicar": "npm run precache && firebase deploy --project mis-detallitos",
+    "publicar": "npm run precache && firebase deploy --project kamilux-store",
     "precache": "node scripts/revisar-precache.mjs"
   },
   "devDependencies": {

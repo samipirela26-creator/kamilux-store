@@ -7,7 +7,7 @@ import { el, abrirDialogo, fecha, pegar } from '../ui/html.js';
 import { formatear } from '../core/dinero.js';
 import { avisar, avisarOk } from '../ui/avisos.js';
 
-const NEGOCIO = 'Mis Detallitos G&M C.A';
+const NEGOCIO = 'Kamilux Store';
 
 const monto = (deuda) => (deuda.COP ? formatear(deuda.COP, 'COP') : formatear(deuda.USD));
 
@@ -67,7 +67,7 @@ export function imagenCobro({ cliente, deuda, fiadas = [], abonos = [] }) {
   c.width = W; c.height = H;
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#0f4c5c'; ctx.fillRect(0, 0, W, 110);
+  ctx.fillStyle = '#0b0a0d'; ctx.fillRect(0, 0, W, 110);
   ctx.fillStyle = '#fff'; ctx.font = 'bold 34px sans-serif';
   ctx.fillText(NEGOCIO, M, 55);
   ctx.font = '22px sans-serif';
@@ -84,7 +84,7 @@ export function imagenCobro({ cliente, deuda, fiadas = [], abonos = [] }) {
   y += 50;
   for (const f of filas) {
     ctx.font = '24px sans-serif';
-    ctx.fillStyle = f.tipo === 'abono' ? '#1b7a3d' : '#222';
+    ctx.fillStyle = f.tipo === 'abono' ? '#16a56e' : '#222';
     ctx.fillText(f.izq, M, y);
     ctx.textAlign = 'right'; ctx.fillText(f.der, W - M, y); ctx.textAlign = 'left';
     ctx.font = '22px sans-serif'; ctx.fillStyle = '#777';
@@ -92,11 +92,11 @@ export function imagenCobro({ cliente, deuda, fiadas = [], abonos = [] }) {
     y += 44 + f.det.length * 28;
   }
 
-  ctx.strokeStyle = '#0f4c5c'; ctx.lineWidth = 2;
+  ctx.strokeStyle = '#0b0a0d'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(M, y); ctx.lineTo(W - M, y); ctx.stroke();
   y += 60;
   ctx.fillStyle = '#222'; ctx.font = 'bold 28px sans-serif'; ctx.fillText('TOTAL A PAGAR', M, y);
-  ctx.fillStyle = '#c0392b'; ctx.textAlign = 'right'; ctx.font = 'bold 40px sans-serif';
+  ctx.fillStyle = '#e85fb4'; ctx.textAlign = 'right'; ctx.font = 'bold 40px sans-serif';
   ctx.fillText(monto(deuda), W - M, y); ctx.textAlign = 'left';
   if (deuda.COP) {
     ctx.fillStyle = '#777'; ctx.font = '20px sans-serif'; ctx.textAlign = 'right';

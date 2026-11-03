@@ -58,7 +58,7 @@ test('las fechas anidadas dentro de arreglos y objetos también vuelven', () => 
 
 test('exportar, pasar por archivo y restaurar devuelve EXACTAMENTE lo mismo', () => {
   const antes = datosDePrueba();
-  const archivo = JSON.stringify(r.armar(antes, { negocio: 'mis-detallitos' }));
+  const archivo = JSON.stringify(r.armar(antes, { negocio: 'kamilux-store' }));
   const leido = JSON.parse(archivo);
 
   const v = r.validar(leido);
@@ -106,16 +106,16 @@ test('un archivo que no sirve se rechaza ANTES de escribir nada', () => {
   assert.equal(r.validar(null).ok, false);
   assert.equal(r.validar({}).ok, false);
   assert.equal(r.validar({ app: 'otra-cosa', formato: 1, colecciones: {} }).ok, false);
-  assert.equal(r.validar({ app: 'mis-detallitos', colecciones: {} }).ok, false);          // sin formato
-  assert.equal(r.validar({ app: 'mis-detallitos', formato: 1, colecciones: {} }).ok, false); // vacío
+  assert.equal(r.validar({ app: 'kamilux-store', colecciones: {} }).ok, false);          // sin formato
+  assert.equal(r.validar({ app: 'kamilux-store', formato: 1, colecciones: {} }).ok, false); // vacío
 
   // De una versión futura: mejor parar que restaurar campos que no se entienden.
-  const futuro = r.validar({ app: 'mis-detallitos', formato: 99, colecciones: { productos: [{ id: 'x' }] } });
+  const futuro = r.validar({ app: 'kamilux-store', formato: 99, colecciones: { productos: [{ id: 'x' }] } });
   assert.equal(futuro.ok, false);
   assert.match(futuro.error, /más nueva/);
 
   // Un documento sin id no se puede volver a poner en su sitio.
-  const roto = r.validar({ app: 'mis-detallitos', formato: 1, colecciones: { productos: [{ nombre: 'sin id' }] } });
+  const roto = r.validar({ app: 'kamilux-store', formato: 1, colecciones: { productos: [{ nombre: 'sin id' }] } });
   assert.equal(roto.ok, false);
   assert.match(roto.error, /sin id/);
 });
@@ -132,7 +132,7 @@ test('el resumen dice qué trae el archivo, para mirarlo antes de aceptar', () =
 test('el nombre del archivo deja ver cuál es el más nuevo sin abrirlo', () => {
   assert.equal(
     r.nombreArchivo(new Date(2026, 9, 23, 9, 5)),
-    'respaldo-detallitos-2026-10-23-0905.json',
+    'respaldo-kamilux-2026-10-23-0905.json',
   );
 });
 
