@@ -32,6 +32,7 @@ import './features/gastos.js';
 import './features/mi-dinero.js';
 import './features/clientes.js';
 import './features/fiados.js';
+import './features/cobros.js';
 import './features/config.js';
 import './reports/panel.js';
 import { icono } from './ui/iconos.js';
