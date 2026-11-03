@@ -612,7 +612,7 @@ async function descargarPlantilla() {
   // 1. Banda de Marca (Fila 1)
   hoja.mergeCells(`A1:${colFin}1`);
   const banda = hoja.getCell('A1');
-  banda.value = 'MIS DETALLITOS G&M C.A. · Plantilla de Importación de Inventario';
+  banda.value = 'KAMILUX STORE · Plantilla de Importación de Inventario';
   banda.font = { name: 'Calibri', size: 13, bold: true, color: { argb: MARCA_TEXTO } };
   banda.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: MARCA } };
   banda.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };

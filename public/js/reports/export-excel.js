@@ -9,7 +9,7 @@
 // negocio y debajo de qué es el archivo y de cuándo, porque estos Excel se
 // imprimen y se mandan por WhatsApp sueltos, sin el nombre del archivo:
 //
-//   1  MIS DETALLITOS G&M C.A.      (banda turquesa, combinada)
+//   1  KAMILUX STORE      (banda turquesa, combinada)
 //   2  Inventario · 10/10/2026      (subtítulo)
 //   3  (respiro)
 //   4  Encabezados                  (congelados y repetidos al imprimir)
@@ -72,7 +72,7 @@ function cabecera(hoja, subtitulo, numCols) {
 
   hoja.mergeCells(`A1:${ultima}1`);
   const banda = hoja.getCell('A1');
-  banda.value = 'MIS DETALLITOS G&M C.A.';
+  banda.value = 'KAMILUX STORE';
   banda.font = { name: 'Calibri', size: 14, bold: true, color: { argb: MARCA_TEXTO } };
   banda.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: MARCA } };
   banda.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };

@@ -32,11 +32,11 @@ export function montarEntrar(nodo) {
         el('div.bienvenida', { texto: 'Bienvenido a' }),
         el('img', { src: 'icons/logo.webp', width: '128', height: '128', alt: 'Kamilux Store' }),
         el('h1', { style: 'margin:.75rem 0 0', texto: 'Kamilux Store' }),
-        el('p', { class: 'lema', texto: 'Tus ventas, tu inventario y lo que de verdad estás ganando.' }),
+        el('p', { class: 'lema', texto: 'Moda que inspira, estilo que define.' }),
       ]),
       el('div.pie-marca', {}, [
-        el('span', { texto: 'G&M C.A.' }),
-        el('span', { texto: 'Papelería' }),
+        el('span', { texto: 'Kamilux' }),
+        el('span', { texto: 'Moda' }),
       ]),
       // El borde ondulado que separa la marca del formulario.
       el('div.ola', { 'aria-hidden': 'true' }),

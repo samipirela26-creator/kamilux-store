@@ -374,7 +374,7 @@ function pintarProductos() {
       el('div.datos', {}, [
         el('div', {}, [
           el('h3', { texto: p.nombre }),
-          el('p.unidad', { texto: `${p.categoria || 'Papelería'} · ${p.unidad || 'unidad'}` }),
+          el('p.unidad', { texto: `${p.categoria || 'Moda'} · ${p.unidad || 'unidad'}` }),
         ]),
         el('div', {}, [
           el('div.precio', { texto: formatear(p.precioUSD) }),
@@ -479,7 +479,7 @@ function abrirDetalle(producto) {
 
   pegar(d,
     cajaFoto(producto, 'foto-grande', { inmediato: true }),
-    el('span.etiqueta.info', { texto: producto.categoria || 'Papelería' }),
+    el('span.etiqueta.info', { texto: producto.categoria || 'Moda' }),
     el('h2', { texto: producto.nombre }),
     producto.descripcion ? el('p', { style: 'margin:.35rem 0 0;color:var(--texto-suave);line-height:1.5', texto: producto.descripcion }) : null,
 
