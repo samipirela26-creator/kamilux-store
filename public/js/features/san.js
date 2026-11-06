@@ -9,8 +9,10 @@ import { formatear, aMenores, desdeUSD } from '../core/dinero.js';
 import { leer } from '../core/estado.js';
 import {
   FRECUENCIAS, CUOTAS_POR_DEFECTO, COMISION_PCT, interesPara, planSan, estadoSan, pagarCuota, faltaDe,
+  primerSabado, resumenSanes,
 } from '../core/san.js';
-import { crearSan, guardarCuotasSan, listarSanes } from '../data/san.js';
+import { comprimirFoto } from '../ui/foto-chica.js';
+import { crearSan, guardarCuotasSan, guardarCamposSan, listarSanes } from '../data/san.js';
 import { telefonoWA } from '../core/telefono.js';
 
 /** Enlace público para que la persona vea su San. */
@@ -50,8 +52,7 @@ registrar('san', {
       const sanes = (await listarSanes().catch(() => [])).sort((a, b) => (b.entrega || '').localeCompare(a.entrega || ''));
       const hoy = diaISO();
       const activos = sanes.filter((s) => s.estado !== 'saldado');
-      const enLaCalle = activos.reduce((t, s) => t + s.cuotas.reduce((x, c) => x + faltaDe(c), 0), 0);
-      const comision = sanes.reduce((t, s) => t + (s.comisionUSD || 0), 0);
+      const r = resumenSanes(sanes);
 
       nodo.innerHTML = '';
       pegar(nodo,
@@ -60,9 +61,12 @@ registrar('san', {
           el('button.btn.principal', { texto: '+ Nuevo San', onclick: () => nuevo(pintarLista) }),
         ]),
         el('div.kpis', { style: 'margin-bottom:.75rem' }, [
-          el('div.kpi.bueno', {}, [el('div.rotulo', { texto: 'POR COBRAR' }), el('div.valor', { texto: formatear(enLaCalle) })]),
-          el('div.kpi', {}, [el('div.rotulo', { texto: 'MI COMISIÓN' }), el('div.valor', { texto: formatear(comision) })]),
+          el('div.kpi', {}, [el('div.rotulo', { texto: 'PRESTADO' }), el('div.valor', { texto: formatear(r.prestado) })]),
+          el('div.kpi', {}, [el('div.rotulo', { texto: 'RECIBIDO' }), el('div.valor', { texto: formatear(r.recibido) })]),
+          el('div.kpi.bueno', {}, [el('div.rotulo', { texto: 'GANANCIA COBRADA' }), el('div.valor', { texto: formatear(r.ganancia) })]),
+          el('div.kpi.acento', {}, [el('div.rotulo', { texto: 'POR COBRAR' }), el('div.valor', { texto: formatear(r.porCobrar) })]),
         ]),
+        el('p', { style: 'font-size:var(--t-pie);margin:0 0 .5rem', texto: `Mi comisión (10% de la ganancia): ${formatear(r.comision)}` }),
         el('p', { style: 'font-size:var(--t-pie);color:var(--texto-suave);border-left:3px solid var(--oro);padding-left:.6rem', texto:
           'Esta plata es aparte: no entra a la caja, ni a las ventas, ni a las ganancias de la tienda.' }),
       );
@@ -99,6 +103,8 @@ registrar('san', {
       const cuotas = el('input', { inputmode: 'numeric', value: String(CUOTAS_POR_DEFECTO) });
       const frecuencia = el('select', {}, Object.entries(FRECUENCIAS).map(([k, f]) => el('option', { value: k, texto: f.nombre })));
       const entrega = el('input', { type: 'date', value: diaISO() });
+      const primero = el('input', { type: 'date', value: primerSabado(diaISO()) });
+      let primeroTocado = false;
       const resumen = el('div', { style: 'margin:.75rem 0' });
       const num = (x) => Number(String(x.value).replace(',', '.')) || 0;
       let interesTocado = false;
@@ -106,6 +112,7 @@ registrar('san', {
       const calc = () => planSan({
         montoUSD: aMenores(monto.value, 'USD') || 0, interesPct: num(interes),
         cuotas: Math.max(1, Math.floor(num(cuotas))), frecuencia: frecuencia.value, entrega: entrega.value || diaISO(),
+        primerCobro: primero.value || null,
       });
       const pintar = () => {
         const p = calc();
@@ -116,7 +123,7 @@ registrar('san', {
           fila('Interés', formatear(p.recargoUSD)),
           fila('Te devuelve', formatear(p.deudaUSD), true),
           p.cuotas[0] ? fila(`${p.cuotas.length} cuotas de`, formatear(p.cuotas[0].montoUSD)) : null,
-          fila(`Tu comisión (${COMISION_PCT}%)`, formatear(p.comisionUSD)),
+          fila(`Tu comisión (${COMISION_PCT}% de la ganancia)`, formatear(p.comisionUSD)),
         );
       };
       monto.addEventListener('input', () => {
@@ -124,7 +131,9 @@ registrar('san', {
         pintar();
       });
       interes.addEventListener('input', () => { interesTocado = true; pintar(); });
-      for (const x of [cuotas, frecuencia, entrega]) x.addEventListener('input', pintar);
+      entrega.addEventListener('input', () => { if (!primeroTocado) primero.value = primerSabado(entrega.value || diaISO()); pintar(); });
+      primero.addEventListener('input', () => { primeroTocado = true; pintar(); });
+      for (const x of [cuotas, frecuencia]) x.addEventListener('input', pintar);
       const campo = (r, n) => el('div.campo', { style: 'margin:.4rem 0' }, [el('label', { texto: r }), n]);
 
       pegar(d,
@@ -133,6 +142,7 @@ registrar('san', {
         el('div.fila', {}, [campo('Monto $', monto), campo('Interés %', interes)]),
         el('div.fila', {}, [campo('Cuotas', cuotas), campo('Cada', frecuencia)]),
         campo('Fecha de entrega', entrega),
+        campo('Primer cobro (los cobros caen en sábado)', primero),
         resumen,
         el('div.fila', {}, [
           el('button.btn.callado', { texto: 'Cancelar', onclick: () => d.close() }),
@@ -142,7 +152,7 @@ registrar('san', {
             await crearSan({
               persona: persona.value.trim(), telefono: telefono.value.trim(),
               montoUSD: p.totalUSD, interesPct: num(interes), frecuencia: frecuencia.value,
-              entrega: entrega.value || diaISO(), cuotas: p.cuotas, deudaUSD: p.deudaUSD,
+              entrega: entrega.value || diaISO(), primerCobro: primero.value || null, cuotas: p.cuotas, deudaUSD: p.deudaUSD,
               comisionPct: COMISION_PCT, comisionUSD: p.comisionUSD,
             });
             d.close(); avisarOk('San entregado.'); alTerminar();
@@ -177,6 +187,7 @@ registrar('san', {
           wa ? el('a.btn.plano', { href: `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`, target: '_blank', rel: 'noopener', texto: '💬 WhatsApp' }) : null,
         ]),
       );
+      pegar(nodo, bloqueGarantia(san, () => detalle(id)));
       const tarjeta = el('div.tarjeta', { style: 'padding:.5rem' });
       for (const c of san.cuotas) {
         const paga = faltaDe(c) === 0;
@@ -192,6 +203,49 @@ registrar('san', {
         ]));
       }
       nodo.appendChild(tarjeta);
+    }
+
+    /** La garantía que dejó la persona: foto, qué es y en qué estado está. */
+    function bloqueGarantia(san, recargar) {
+      const g = san.garantia;
+      return el('div.tarjeta', { style: 'margin:.6rem 0' }, [
+        el('strong', { texto: 'Garantía' }),
+        g
+          ? el('div', { style: 'display:flex;gap:.7rem;margin-top:.4rem' }, [
+            g.foto ? el('img', { src: g.foto, alt: 'Garantía', style: 'width:96px;height:96px;object-fit:cover;border-radius:var(--r-chico)' }) : null,
+            el('div', {}, [el('div', { html: esc(g.descripcion || '') }), el('div', { style: 'color:var(--texto-suave)', html: `Estado: ${esc(g.estado || '—')}` })]),
+          ])
+          : el('p', { style: 'color:var(--texto-suave);margin:.3rem 0', texto: 'No ha dejado ninguna.' }),
+        el('button.btn.plano', { style: 'margin-top:.4rem', texto: g ? 'Cambiar garantía' : '+ Anotar garantía', onclick: () => pedirGarantia(san, recargar) }),
+      ]);
+    }
+
+    function pedirGarantia(san, recargar) {
+      const d = abrirDialogo('');
+      const actual = san.garantia || {};
+      const descripcion = el('input', { value: actual.descripcion || '', placeholder: 'Qué dejó (ej: licuadora, celular)' });
+      const estado = el('input', { value: actual.estado || '', placeholder: 'En qué estado está (ej: buen estado, rayada)' });
+      const archivo = el('input', { type: 'file', accept: 'image/*', capture: 'environment' });
+      const vista = el('img', { alt: '', style: `display:${actual.foto ? 'block' : 'none'};width:120px;height:120px;object-fit:cover;border-radius:var(--r-chico);margin:.4rem 0`, ...(actual.foto ? { src: actual.foto } : {}) });
+      let foto = actual.foto || '';
+      archivo.addEventListener('change', async () => {
+        if (!archivo.files[0]) return;
+        try { foto = await comprimirFoto(archivo.files[0]); vista.src = foto; vista.style.display = 'block'; }
+        catch (e) { avisarMal(e.message); }
+      });
+      const campo = (r, n) => el('div.campo', { style: 'margin:.4rem 0' }, [el('label', { texto: r }), n]);
+      pegar(d,
+        el('h2', { texto: 'Garantía' }),
+        campo('Qué es', descripcion), campo('Estado', estado), campo('Foto', archivo), vista,
+        el('div.fila', {}, [
+          el('button.btn.callado', { texto: 'Cancelar', onclick: () => d.close() }),
+          el('button.btn.principal', { texto: 'Guardar', onclick: () => {
+            if (!descripcion.value.trim()) return avisarMal('Escribe qué dejó.');
+            guardarCamposSan(san.id, { garantia: { descripcion: descripcion.value.trim(), estado: estado.value.trim(), foto, el: diaISO() } });
+            d.close(); avisarOk('Garantía anotada.'); setTimeout(recargar, 400);
+          } }),
+        ]),
+      );
     }
 
     await pintarLista();

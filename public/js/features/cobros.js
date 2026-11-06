@@ -57,6 +57,28 @@ registrar('cobros', {
           el('div.kpi', {}, [el('div.rotulo', { texto: 'ESTA SEMANA' }), el('div.valor', { texto: formatear(suma(grupos.semana)) })]),
         ]),
       );
+      // Viernes y sábado son días de cobro: la lista de quién paga y quién está
+      // atrasado queda lista para mandarse por WhatsApp.
+      const dia = new Date().getDay();
+      if (dia === 5 || dia === 6) {
+        const limite = dia === 5 ? sumarDias(hoy, 1) : hoy;
+        const paraHoy = filas.filter((f) => f.q.fecha && f.q.fecha >= hoy && f.q.fecha <= limite);
+        const linea = (f) => `• ${f.c.nombre}${f.esSan ? ' (San)' : ''} — ${formatear(faltaDe(f.q))} · cuota ${f.q.n} de ${f.total}`;
+        const texto = [
+          `*Cobros del ${dia === 5 ? 'viernes y sábado' : 'sábado'}* (${hoy})`,
+          '', 'Para cobrar:', ...(paraHoy.length ? paraHoy.map(linea) : ['• Nadie']),
+          '', 'Atrasados:', ...(grupos.vencidas.length ? grupos.vencidas.map(linea) : ['• Nadie']),
+        ].join('\n');
+        nodo.appendChild(el('div.tarjeta.marca', { style: 'margin-bottom:1rem' }, [
+          el('h2', { texto: 'Hoy toca cobrar' }),
+          el('p', { texto: `${paraHoy.length} para cobrar · ${grupos.vencidas.length} atrasados` }),
+          el('button.btn', { texto: '📲 Mandarme la lista por WhatsApp', onclick: () => {
+            const numero = telefonoWA(leer('config_whatsapp') || '') || telefonoWA(prompt('¿A qué número de WhatsApp te la mando?') || '');
+            if (!numero) return;
+            window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
+          } }),
+        ]));
+      }
       if (!filas.length) {
         nodo.appendChild(el('div.vacio', { texto: 'No hay cuotas por cobrar. Los créditos con cuotas semanales aparecen aquí.' }));
         return;

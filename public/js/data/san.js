@@ -43,3 +43,8 @@ export function guardarCuotasSan(san, cuotas) {
 }
 
 export const listarSanes = ({ fuente = SERVIDOR } = {}) => traer(query(col('sanes')), fuente);
+
+/** Cambia campos sueltos de un San (por ejemplo la garantía). */
+export function guardarCamposSan(id, campos) {
+  encolar(setDoc(ref('sanes', id), campos, { merge: true }), 'san-campos');
+}

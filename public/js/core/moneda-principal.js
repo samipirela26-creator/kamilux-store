@@ -27,3 +27,4 @@ export function enPrincipal(centavosUSD, moneda = monedaPrincipal(), tasas = lee
   if (moneda === MONEDA_BASE || !tasas[moneda]) return formatear(centavosUSD);
   return formatear(desdeUSD(centavosUSD, moneda, tasas[moneda]), moneda);
 }
+

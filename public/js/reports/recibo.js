@@ -3,6 +3,7 @@
 
 import { el, abrirDialogo, esc, fecha, pegar } from '../ui/html.js';
 import { formatear, desdeUSD, MONEDAS } from '../core/dinero.js';
+import { monedasDelRecibo } from '../core/monedas-recibo.js';
 import { avisar, avisarOk } from '../ui/avisos.js';
 
 const NEGOCIO = 'Kamilux Store';
@@ -36,8 +37,8 @@ export function textoRecibo({ id, venta, tasas = {} }) {
   for (const pago of venta.pagos || []) {
     if (pago.moneda !== 'USD' && pago.tasa > 0) tasasDeLaVenta[pago.moneda] = pago.tasa;
   }
-  const otras = Object.keys(MONEDAS)
-    .filter((m) => m !== 'USD' && tasasDeLaVenta[m])
+  const otras = monedasDelRecibo()
+    .filter((m) => m !== 'USD' && MONEDAS[m] && tasasDeLaVenta[m])
     .map((m) => `${formatear(desdeUSD(venta.totalUSD, m, tasasDeLaVenta[m]), m)}`);
   // "Pagó: $ 6.000" debajo de un total de $ 6.000 no le dice nada a nadie: se
   // pone solo cuando aporta algo, que es cuando quedó debiendo.
