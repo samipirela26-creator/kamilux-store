@@ -16,7 +16,7 @@
 }
 .login .panel .marca { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
 .login .panel .bienvenida {
-  font-size: .95rem; font-weight: 600; color: var(--sobre-marca);
+  font-size: .95rem; font-weight: 600; color: var(--texto);
   letter-spacing: .01em;
 }
 .login .panel img {
@@ -24,9 +24,9 @@
   border: 0; background: var(--superficie);
   padding: 6px;
 }
-.login .panel h1 { color: var(--sobre-marca-fuerte); font-size: 2.4rem; }
+.login .panel h1 { color: var(--texto); font-size: 2.4rem; }
 .login .panel .lema {
-  color: var(--sobre-marca); font-weight: 500;
+  color: var(--texto); font-weight: 500;
   font-size: .95rem; max-width: 34ch; line-height: 1.45;
   margin: .25rem 0 0;
 }
@@ -36,7 +36,7 @@
   display: flex; align-items: center; justify-content: center; gap: .9rem;
   font-size: .68rem; font-weight: 700;
   letter-spacing: .14em; text-transform: uppercase;
-  color: var(--sobre-marca);
+  color: var(--texto);
 }
 .login .panel .pie-marca span + span { border-left: 1px solid currentColor; padding-left: .9rem; }
 
