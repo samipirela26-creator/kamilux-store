@@ -9,9 +9,9 @@
 }
 .tarjeta + .tarjeta { margin-top: .75rem; }
 /* Bloques de color llenos: el texto encima SIEMPRE en negro/oscuro legible. */
-.tarjeta.marca { background: var(--marca); border-radius: var(--r-bloque); color: var(--sobre-marca-fuerte); }
-.tarjeta.marca h2 { color: var(--sobre-marca-fuerte); }
-.tarjeta.marca p, .tarjeta.marca .pie { color: var(--sobre-marca-fuerte); opacity: .9; }
+.tarjeta.marca { background: linear-gradient(135deg, #5b1785, #8e2bc9); border-radius: var(--r-bloque); color: var(--texto); }
+.tarjeta.marca h2 { color: var(--texto); }
+.tarjeta.marca p, .tarjeta.marca .pie { color: var(--texto); opacity: .92; }
 .tarjeta.marca .btn { background: #0b0a0d; color: #f4f1ec; border-color: transparent; }
 .tarjeta.amarilla { background: var(--amarillo); border-radius: var(--r-bloque); color: #0b0a0d; }
 .tarjeta.amarilla h2 { color: #0b0a0d; }

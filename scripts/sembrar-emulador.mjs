@@ -1,14 +1,14 @@
 // Siembra los usuarios de prueba en el emulador (dueño y empleado).
 // Uso:  node scripts/sembrar-emulador.mjs
 // Antes hay que tener el emulador corriendo:  npm run emuladores
-const PROY = process.env.PROYECTO || 'mis-detallitos';
-const NEGOCIO = 'mis-detallitos';
+const PROY = process.env.PROYECTO || 'kamilux-store';
+const NEGOCIO = 'kamilux';
 const AUTH = 'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key';
 const FS = `http://127.0.0.1:8080/v1/projects/${PROY}/databases/(default)/documents`;
 
 const USUARIOS = [
-  { email: 'dueno@detallitos.test', clave: 'detallitos123', nombre: 'Samuel', rol: 'dueno' },
-  { email: 'primo@detallitos.test', clave: 'detallitos123', nombre: 'Primo', rol: 'empleado' },
+  { email: 'dueno@kamilux.test', clave: 'kamilux123', nombre: 'Dueña (prueba)', rol: 'dueno' },
+  { email: 'empleada@kamilux.test', clave: 'kamilux123', nombre: 'Empleada (prueba)', rol: 'empleado' },
 ];
 
 for (const u of USUARIOS) {

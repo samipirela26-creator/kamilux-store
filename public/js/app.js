@@ -175,6 +175,8 @@ registrar('panel', {
       atajo('cart', 'Ventas', 'Una por una: qué se vendió, quién la cobró y a quién.', 'ventas'),
       atajo('chart', 'Reportes', 'Ganancia por producto y margen flojo.', 'reportes'),
       atajo('handshake', 'Deudores', 'Quién te debe, cuánto y desde cuándo.', 'clientes'),
+      atajo('check', 'Cobros', 'Cuotas atrasadas y las de esta semana, con aviso por WhatsApp.', 'cobros'),
+      atajo('wallet', 'San', 'Grupos de ahorro: rondas, cuotas y quién cobra.', 'san'),
       atajo('wallet', 'Mi dinero', 'Cuánto gané y cuánto puedo sacar.', 'mi-dinero'),
       atajo('expense', 'Gastos y salidas', 'Salidas de caja por categoría.', 'gastos-dueno'),
       atajo('cash', 'Caja', 'Abrir turno, reporte X y cierre Z.', 'caja-dueno'),

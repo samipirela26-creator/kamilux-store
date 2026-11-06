@@ -110,9 +110,9 @@
 }
 .kpi .pie { font-size: var(--t-pie); color: var(--texto-suave); }
 /* Lo bueno en turquesa, lo que urge en amarillo, lo malo en papel con cifra roja. */
-.kpi.bueno { background: var(--marca); border-radius: var(--r-bloque); }
-.kpi.bueno .rotulo { color: var(--sobre-marca-fuerte); opacity: .85; }
-.kpi.bueno .valor { color: var(--sobre-marca-fuerte); }
+.kpi.bueno { background: linear-gradient(135deg, #5b1785, #8e2bc9); border-radius: var(--r-bloque); }
+.kpi.bueno .rotulo { color: var(--texto); opacity: .85; }
+.kpi.bueno .valor { color: var(--texto); }
 .kpi.malo .valor { color: var(--rojo); }
 .kpi.acento { background: var(--amarillo); border-radius: var(--r-bloque); }
 .kpi.acento .rotulo { color: #0b0a0d; }
