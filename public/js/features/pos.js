@@ -1086,4 +1086,4 @@ function elegirCliente() {
   });
 }
 
-export { agregar, carrito, vaciar };
+export { agregar, carrito, vaciar, elegirCliente };

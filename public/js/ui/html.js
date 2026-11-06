@@ -215,3 +215,11 @@ export function sumarDias(iso, dias) {
 }
 
 export const primerDiaDelMes = () => diaISO().slice(0, 8) + '01';
+
+/**
+ * Esperar a que el historial se asiente. Si un cuadro se cierra y OTRO se abre
+ * en el acto (elegir cliente y luego las condiciones del crédito), el "atrás"
+ * que devuelve la entrada del primero cae cuando el segundo ya está abierto y
+ * lo cierra. Con un respiro antes de abrir el segundo, el ajuste ya pasó.
+ */
+export const respirar = () => new Promise((r) => setTimeout(r, 150));

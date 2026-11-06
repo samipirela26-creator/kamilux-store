@@ -220,6 +220,11 @@ service cloud.firestore {
         allow list: if false;
         allow write: if esDueno();
       }
+      // --- pedidos de Shein: lote, cliente, prendas, abono y si ya se entregó ---
+      match /pedidos/{id} {
+        allow read, create, update: if delEquipo();
+        allow delete: if esDueno();
+      }
       match /abonos/{id} {
         allow read: if delEquipo();
         allow create: if delEquipo() && soyYo();

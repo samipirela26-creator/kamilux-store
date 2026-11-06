@@ -34,6 +34,7 @@ import './features/clientes.js';
 import './features/fiados.js';
 import './features/cobros.js';
 import './features/san.js';
+import './features/pedidos.js';
 import './features/config.js';
 import './reports/panel.js';
 import { icono } from './ui/iconos.js';
@@ -171,6 +172,7 @@ registrar('panel', {
     // Lo de todos los días a la vista; lo demás, un toque más abajo. Vender,
     // Inventario, Reportes y San ya están en la barra de abajo.
     nodo.appendChild(el('div.atajos-grid', {}, [
+      atajo('cart', 'Pedidos Shein', 'Lotes, clientas, prendas, abono y si ya se entregó.', 'pedidos'),
       atajo('check', 'Cobros', 'Cuotas atrasadas y las de esta semana, con aviso por WhatsApp.', 'cobros'),
       atajo('handshake', 'Deudores', 'Quién te debe, cuánto y desde cuándo.', 'clientes'),
       atajo('cart', 'Ventas', 'Una por una: qué se vendió, quién la cobró y a quién.', 'ventas'),

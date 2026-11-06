@@ -6,7 +6,7 @@
 // toca si ese día se acordó otra cosa. Recargo y cuotas semanales siguen
 // existiendo, pero escondidos en "Otras condiciones".
 // Devuelve null si se cancela.
-import { el, abrirDialogo, pegar } from '../ui/html.js';
+import { el, abrirDialogo, pegar, respirar } from '../ui/html.js';
 import { MONEDAS, formatear, aMenores, aMayores, crearPago, totalPagadoUSD, desdeUSD } from '../core/dinero.js';
 import { calcularCredito, sumarDias } from '../core/credito.js';
 
@@ -17,7 +17,8 @@ export const TIPOS_CREDITO = {
   libre: { nombre: 'Venta libre · 15 días', dias: 15 },
 };
 
-export function pedirCredito({ totalUSD, tasas, cliente }) {
+export async function pedirCredito({ totalUSD, tasas, cliente }) {
+  await respirar();
   return new Promise((resolver) => {
     const d = abrirDialogo('');
     let hecho = false;
