@@ -3,7 +3,7 @@
 // Se guarda una tasa por día (negocios/.../tasas/2026-10-07) y cada pago se
 // lleva su tasa congelada. Jamás se recalcula el pasado.
 //
-// El bolívar sale del BCV. El BCV publica dos tasas y aquí se elige cuál usar:
+// El bolívar sale del BCV o de Binance. Aquí se elige cuál usar:
 //   - euro  (por defecto): es la que usa este negocio para cobrar en Bs.
 //   - dólar: la oficial del dólar, para quien prefiera esa.
 // La elección se guarda en config/general.baseBs y vale para todos los equipos.
@@ -20,6 +20,8 @@ export const hoyISO = () => new Date().toISOString().slice(0, 10);
 export const BASES_BS = {
   EUR: { base: 'EUR', nombre: 'Euro del BCV',  fuente: 'bcv-eur', url: 'https://ve.dolarapi.com/v1/euros/oficial' },
   USD: { base: 'USD', nombre: 'Dólar del BCV', fuente: 'bcv-usd', url: 'https://ve.dolarapi.com/v1/dolares/oficial' },
+  // El dólar paralelo, que es el que se mueve con Binance. No es del BCV.
+  BINANCE: { base: 'BINANCE', nombre: 'Dólar Binance (paralelo)', fuente: 'binance', url: 'https://ve.dolarapi.com/v1/dolares/paralelo' },
 };
 const BASE_POR_DEFECTO = 'EUR';
 
@@ -134,10 +136,11 @@ const numero = async (url, saca) => {
  */
 export async function sugerirTasas() {
   const elegida = await baseBs();
-  const [eur, usd, cop] = await Promise.all([
+  const [eur, usd, binance, cop] = await Promise.all([
     // El BCV publica las dos; se traen juntas para poder mostrarlas y comparar.
     numero(BASES_BS.EUR.url, (j) => j?.promedio),
     numero(BASES_BS.USD.url, (j) => j?.promedio),
+    numero(BASES_BS.BINANCE.url, (j) => j?.promedio),
     // El peso no lo publica el BCV; sale de un cambio internacional.
     numero('https://open.er-api.com/v6/latest/USD', (j) => j?.rates?.COP),
   ]);
@@ -145,12 +148,13 @@ export async function sugerirTasas() {
   const bcv = {};
   if (eur) bcv.EUR = Math.round(eur * 100);   // Bs -> céntimos
   if (usd) bcv.USD = Math.round(usd * 100);
+  if (binance) bcv.BINANCE = Math.round(binance * 100);
 
   const salida = { bcv, base: elegida.base, fuente: elegida.fuente };
   if (bcv[elegida.base]) salida.VES = bcv[elegida.base];
   else if (bcv.EUR || bcv.USD) {
     // Si justo falló la que usa el negocio, se ofrece la otra, pero diciéndolo.
-    const otra = bcv.EUR ? 'EUR' : 'USD';
+    const otra = bcv.EUR ? 'EUR' : bcv.USD ? 'USD' : 'BINANCE';
     salida.VES = bcv[otra];
     salida.base = otra;
     salida.fuente = BASES_BS[otra].fuente;

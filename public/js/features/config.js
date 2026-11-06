@@ -111,7 +111,7 @@ async function pintarTasas(caja) {
   const actual = await cargarTasas();
   const base = await baseBs();
   const tasas = leer('tasas') || {};
-  const auto = actual && actual.fuente && actual.fuente.startsWith('bcv-');
+  const auto = actual && actual.fuente && (actual.fuente.startsWith('bcv-') || actual.fuente === 'binance');
   caja.innerHTML = '';
   pegar(caja, 
     el('h2', { texto: 'Tasas de hoy' }),
@@ -120,7 +120,7 @@ async function pintarTasas(caja) {
       style: 'color:var(--texto-suave);font-size:var(--t-cuerpo)',
       texto: actual?.deHoy
         ? (auto
-            ? `Puestas hoy solas con la tasa del ${actual.fuente === 'bcv-eur' ? 'euro' : 'dólar'} del BCV.`
+            ? `Puestas hoy solas con ${actual.fuente === 'bcv-eur' ? 'el euro del BCV' : actual.fuente === 'binance' ? 'el dólar Binance' : 'el dólar del BCV'}.`
             : `Puestas hoy por ${actual.nombreUsuario || 'ti'}.`)
         : actual
           ? `Las últimas son del ${actual.fecha}. Actualízalas para que los cobros salgan bien.`
@@ -138,7 +138,7 @@ async function pintarTasas(caja) {
     } catch (e) { avisarMal('No se pudo guardar: ' + (e.message || e)); }
   };
   caja.appendChild(el('div.campo', {}, [
-    el('label', { texto: 'Tasa del BCV que usas para cobrar en bolívares' }),
+    el('label', { texto: 'Tasa que usas para cobrar en bolívares' }),
     selector,
   ]));
 
@@ -203,10 +203,11 @@ async function pintarTasas(caja) {
       }
       const partes = [];
       if (s.bcv?.EUR) partes.push(`euro ${formatear(s.bcv.EUR, 'VES')}`);
-      if (s.bcv?.USD) partes.push(`dólar ${formatear(s.bcv.USD, 'VES')}`);
-      comparacion.textContent = partes.length ? `BCV: ${partes.join(' · ')}` : '';
+      if (s.bcv?.USD) partes.push(`dólar BCV ${formatear(s.bcv.USD, 'VES')}`);
+      if (s.bcv?.BINANCE) partes.push(`Binance ${formatear(s.bcv.BINANCE, 'VES')}`);
+      comparacion.textContent = partes.length ? `Hoy: ${partes.join(' · ')}` : '';
       avisarOk(s.base === base.base
-        ? 'Tasa del BCV puesta. Revísala y guarda.'
+        ? 'Tasa puesta. Revísala y guarda.'
         : `La del ${base.nombre.toLowerCase()} no respondió; se puso la otra. Revísala.`);
     } }),
     el('button.btn.principal', { texto: 'Guardar tasas', onclick: async () => {
