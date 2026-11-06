@@ -6,7 +6,7 @@ import { registrar } from '../core/router.js';
 import { el, esc, abrirDialogo, pegar, diaISO } from '../ui/html.js';
 import { avisarOk, avisarMal } from '../ui/avisos.js';
 import { MONEDAS, formatear, aMenores } from '../core/dinero.js';
-import { FRECUENCIAS, poteDe, rondasDe, estadoSan, deudaPorPersona, sortear } from '../core/san.js';
+import { FRECUENCIAS, comisionGanada, poteDe, rondasDe, estadoSan, deudaPorPersona, sortear } from '../core/san.js';
 import { guardarSan, listarSanes, movimientosDe, registrarCuotaSan, registrarEntregaSan } from '../data/san.js';
 import { telefonoWA } from './cobros.js';
 
@@ -98,6 +98,9 @@ registrar('san', {
         el('h2', { style: 'margin-top:.6rem', html: esc(san.nombre) }),
         el('p', { style: 'color:var(--texto-suave)', texto:
           `Pote ${m$(p.bruto)}${p.comision ? ` · comisión ${m$(p.comision)} · le llegan ${m$(p.neto)}` : ''} · ${FRECUENCIAS[san.frecuencia].nombre.toLowerCase()}` }),
+        el('p', { style: 'font-size:var(--t-pie);color:var(--texto-suave);border-left:3px solid var(--oro);padding-left:.6rem', texto:
+          'Esta plata es aparte: no entra a la caja, ni a las ventas, ni a las ganancias de la tienda.' }),
+        p.comision ? el('p', { style: 'font-weight:600', texto: `Comisión ganada en este San: ${m$(comisionGanada(movs))}` }) : null,
         empezado ? null : el('button.btn.plano', { texto: '🎲 Sortear el orden de cobro', onclick: async () => {
           await guardarSan({ manos: sortear(san.manos) }, id);
           avisarOk('Orden sorteado.'); setTimeout(recargar, 400);

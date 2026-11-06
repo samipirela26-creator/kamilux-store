@@ -87,3 +87,7 @@ export function sortear(manos, azar = Math.random) {
   }
   return a;
 }
+
+/** Lo que la organizadora se ha ganado en comisiones (de los potes ya entregados). */
+export const comisionGanada = (movs = []) =>
+  movs.filter((m) => m.tipo === 'entrega').reduce((t, m) => t + (m.comision || 0), 0);

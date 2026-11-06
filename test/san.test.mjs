@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { poteDe, rondasDe, rondaActual, estadoSan, deudaPorPersona, sortear } from '../public/js/core/san.js';
+import { comisionGanada, poteDe, rondasDe, rondaActual, estadoSan, deudaPorPersona, sortear } from '../public/js/core/san.js';
 
 const san = {
   cuota: 1000, comisionPct: 5, frecuencia: 'semanal', inicio: '2026-11-02',
@@ -45,4 +45,11 @@ test('abonos parciales se suman y la entrega se marca', () => {
 test('sortear conserva a todos', () => {
   const s = sortear(san.manos, () => 0.3);
   assert.deepEqual(s.map((m) => m.id).sort(), ['a', 'b', 'c']);
+});
+test('la comisión ganada suma solo los potes entregados', () => {
+  assert.equal(comisionGanada([
+    { tipo: 'entrega', ronda: 1, monto: 2850, comision: 150 },
+    { tipo: 'entrega', ronda: 2, monto: 2850, comision: 150 },
+    { tipo: 'cuota', ronda: 3, mano: 'a', monto: 1000 },
+  ]), 300);
 });
