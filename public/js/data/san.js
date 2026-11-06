@@ -1,34 +1,45 @@
-// san.js — los Sanes y sus pagos. Cada San se lleva en UNA moneda fija y NO
-// toca la caja del negocio: es plata de otras personas que se administra.
+// san.js — los Sanes (préstamos) y su espejo público.
+//
+// Un San NO toca la caja del negocio: es plata de la dueña aparte. Cada San
+// tiene un `token` al azar; con él, la persona puede ver en qué cuota va desde
+// un enlace, sin cuenta. El espejo (`san_publico/{token}`) lleva solo lo que
+// esa persona puede ver: su nombre de pila, las cuotas y lo pagado. Nada de
+// teléfono, ni comisión, ni notas.
 import { col, ref, refNuevo } from '../core/firebase.js';
-import { setDoc, query, where, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { usuarioActual } from '../core/sesion.js';
+import { setDoc, query, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { encolar } from './cola.js';
 import { traer, SERVIDOR } from './lectura.js';
 
-export async function guardarSan(datos, id = null) {
-  const documento = id ? ref('sanes', id) : refNuevo('sanes');
-  encolar(setDoc(documento, { ...datos, ...(id ? {} : { estado: 'activo', creado: serverTimestamp() }) }, { merge: true }), 'san');
-  return documento.id;
+const tokenNuevo = () => {
+  const b = new Uint8Array(15);
+  crypto.getRandomValues(b);
+  return [...b].map((x) => x.toString(36).padStart(2, '0')).join('').slice(0, 24);
+};
+
+const espejo = (san) => ({
+  persona: String(san.persona || '').split(' ')[0],
+  montoUSD: san.montoUSD,
+  frecuencia: san.frecuencia,
+  entrega: san.entrega,
+  cuotas: san.cuotas.map((c) => ({ n: c.n, fecha: c.fecha || null, montoUSD: c.montoUSD, pagadoUSD: c.pagadoUSD || 0 })),
+  actualizado: serverTimestamp(),
+});
+
+export async function crearSan(datos) {
+  const documento = refNuevo('sanes');
+  const san = { ...datos, token: tokenNuevo(), estado: 'activo', creado: serverTimestamp() };
+  encolar(setDoc(documento, san), 'san');
+  encolar(setDoc(ref('san_publico', san.token), espejo(san)), 'san-publico');
+  return { id: documento.id, token: san.token };
+}
+
+/** Guarda las cuotas nuevas (un pago) y deja el espejo al día. */
+export function guardarCuotasSan(san, cuotas) {
+  const saldado = cuotas.every((c) => (c.pagadoUSD || 0) >= c.montoUSD);
+  const nuevo = { ...san, cuotas, estado: saldado ? 'saldado' : 'activo' };
+  encolar(setDoc(ref('sanes', san.id), { cuotas, estado: nuevo.estado }, { merge: true }), 'san-pago');
+  encolar(setDoc(ref('san_publico', san.token), espejo(nuevo)), 'san-publico');
+  return nuevo;
 }
 
 export const listarSanes = ({ fuente = SERVIDOR } = {}) => traer(query(col('sanes')), fuente);
-
-export const movimientosDe = (sanId, { fuente = SERVIDOR } = {}) =>
-  traer(query(col('san_movs'), where('sanId', '==', sanId)), fuente);
-
-/** Una cuota (o parte de ella) que una mano entregó en una ronda. */
-export function registrarCuotaSan({ sanId, ronda, mano, monto }) {
-  const u = usuarioActual();
-  encolar(setDoc(refNuevo('san_movs'), {
-    sanId, tipo: 'cuota', ronda, mano, monto, uid: u.uid, nombreUsuario: u.nombre, ts: serverTimestamp(),
-  }), 'san-cuota');
-}
-
-/** Se le entregó el pote a quien cobra. El id es fijo: no se entrega dos veces. */
-export function registrarEntregaSan({ sanId, ronda, monto, comision }) {
-  const u = usuarioActual();
-  encolar(setDoc(ref('san_movs', `${sanId}_${ronda}_entrega`), {
-    sanId, tipo: 'entrega', ronda, monto, comision, uid: u.uid, nombreUsuario: u.nombre, ts: serverTimestamp(),
-  }), 'san-entrega');
-}

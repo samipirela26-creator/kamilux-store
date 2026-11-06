@@ -1,93 +1,55 @@
-// san.js — el SAN (juego de ahorro rotativo): aritmética pura.
+// san.js — el SAN de Kamilux: un préstamo que se entrega de una vez.
 //
-// Un grupo de personas aporta una cuota fija cada semana, quincena o mes; cada
-// ronda el pote completo le toca a UNA "mano". Una persona puede tener varias
-// manos. Hay tantas rondas como manos, y cada mano cobra una vez.
+// No es el juego de ahorro con turnos: el dinero se entrega completo el primer
+// día y se devuelve en cuotas semanales o quincenales con un interés fijo.
+//   $100 al 50 % en 4 semanas = $150 → 4 cuotas de $37,50.
+// Todo en centavos de dólar; los bolívares salen con la tasa del euro del día
+// en que se paga cada cuota (ver features/san.js).
 //
-// El San se lleva en UNA moneda fija (la que se acuerda al armarlo), así que
-// aquí no hay tasas: todo son unidades menores de esa moneda.
-//
-// san = { cuota, comisionPct, frecuencia: 'semanal'|'quincenal'|'mensual',
-//         inicio: 'YYYY-MM-DD', manos: [{ id, nombre, telefono }] }
-//   El orden de `manos` ES el orden de cobro: la mano 0 cobra la ronda 1.
-// mov = { tipo: 'cuota', ronda, mano: id, monto }  |  { tipo: 'entrega', ronda, monto }
-import { sumarDias } from './credito.js';
+// Reglas puestas por la dueña (por confirmar los tramos): hasta $70 el interés
+// es 30 %, de ahí en adelante 50 %. Su comisión es el 10 % de lo entregado y
+// es plata aparte: no baja lo que recibe la persona ni entra a la tienda.
+import { calcularCredito, aplicarPago, estadoCuotas, faltaDe, sumarDias } from './credito.js';
 
 export const FRECUENCIAS = {
   semanal: { nombre: 'Semanal', dias: 7 },
   quincenal: { nombre: 'Quincenal', dias: 15 },
-  mensual: { nombre: 'Mensual', dias: 30 },
 };
 
-/** Fecha de la ronda n (1 = la primera). */
-export const fechaRonda = (san, n) => sumarDias(san.inicio, (n - 1) * FRECUENCIAS[san.frecuencia].dias);
+export const TOPE_TRAMO_CENTAVOS = 7000;   // $70
+export const INTERES_HASTA_TOPE = 30;
+export const INTERES_SOBRE_TOPE = 50;
+export const COMISION_PCT = 10;
+export const CUOTAS_POR_DEFECTO = 4;
 
-/** Lo que junta una ronda si todos pagan, y lo que se queda la organizadora. */
-export function poteDe(san) {
-  const bruto = san.cuota * san.manos.length;
-  const comision = Math.round((bruto * (san.comisionPct || 0)) / 100);
-  return { bruto, comision, neto: bruto - comision };
-}
+/** Interés que corresponde a un monto prestado (se puede cambiar a mano). */
+export const interesPara = (montoUSD) => (montoUSD <= TOPE_TRAMO_CENTAVOS ? INTERES_HASTA_TOPE : INTERES_SOBRE_TOPE);
 
-/** Las rondas del San: cuál es, qué día y a quién le toca. */
-export const rondasDe = (san) => san.manos.map((m, i) => ({ n: i + 1, fecha: fechaRonda(san, i + 1), cobra: m }));
-
-/** Ronda en curso hoy (la última cuya fecha ya llegó); 0 si no empieza aún. */
-export function rondaActual(san, hoy) {
-  let n = 0;
-  for (const r of rondasDe(san)) if (r.fecha <= hoy) n = r.n;
-  return n;
+/** El plan de un San nuevo: cuotas con fecha, interés y la comisión de la dueña. */
+export function planSan({ montoUSD, interesPct, cuotas = CUOTAS_POR_DEFECTO, frecuencia = 'semanal', entrega, comisionPct = COMISION_PCT }) {
+  const dias = FRECUENCIAS[frecuencia].dias;
+  const plan = calcularCredito({
+    totalUSD: montoUSD, abonoUSD: 0, recargoPct: interesPct, modo: 'unico',
+    semanas: cuotas, primerCobro: sumarDias(entrega, dias), diasEntre: dias,
+  });
+  return { ...plan, comisionUSD: Math.round((montoUSD * comisionPct) / 100) };
 }
 
 /**
- * Cómo va el San hoy.
- *  - `pagado[ronda][mano]`: lo que esa mano ha dado en esa ronda.
- *  - `debe`: cuotas de rondas YA llegadas que no están completas.
- *  - `entregada[ronda]`: si el pote de esa ronda ya se le entregó a quien cobra.
+ * Cómo va un San hoy: en qué cuota van ("semana 2 de 4"), cuánto falta y si
+ * hay cuotas vencidas.
  */
-export function estadoSan(san, movs = [], hoy) {
-  const pagado = {};
-  const entregada = {};
-  for (const m of movs) {
-    if (m.tipo === 'cuota') {
-      pagado[m.ronda] ??= {};
-      pagado[m.ronda][m.mano] = (pagado[m.ronda][m.mano] || 0) + m.monto;
-    } else if (m.tipo === 'entrega') {
-      entregada[m.ronda] = true;
-    }
-  }
-  const actual = rondaActual(san, hoy);
-  const debe = [];
-  for (let n = 1; n <= actual; n++) {
-    for (const mano of san.manos) {
-      const dio = pagado[n]?.[mano.id] || 0;
-      if (dio < san.cuota) debe.push({ ronda: n, mano, falta: san.cuota - dio });
-    }
-  }
-  const recaudado = (n) => Object.values(pagado[n] || {}).reduce((t, x) => t + x, 0);
-  return { pagado, entregada, actual, debe, recaudado, terminado: actual >= san.manos.length && san.manos.every((_, i) => entregada[i + 1]) };
+export function estadoSan(cuotas = [], hoy) {
+  const e = estadoCuotas(cuotas, hoy);
+  const pagadas = cuotas.filter((c) => faltaDe(c) === 0).length;
+  return { ...e, pagadas, total: cuotas.length, vaPorLaCuota: Math.min(pagadas + 1, cuotas.length) };
 }
 
-/** Por persona (varias manos suman): lo que debe en total hoy. */
-export function deudaPorPersona(estado) {
-  const por = new Map();
-  for (const d of estado.debe) {
-    const k = d.mano.nombre;
-    por.set(k, (por.get(k) || 0) + d.falta);
-  }
-  return por;
+/** Marca una cuota como pagada completa (guarda con qué tasa se pagó en bolívares). */
+export function pagarCuota(cuotas, n, { VES = 0, tasaVES = 0, fecha = null } = {}) {
+  return cuotas.map((c) => (c.n === n
+    ? { ...c, pagadoUSD: c.montoUSD, pagoVES: VES, tasaVES, pagadaEl: fecha }
+    : c));
 }
 
-/** Orden de cobro al azar (sorteo). `azar` se inyecta para poder probarlo. */
-export function sortear(manos, azar = Math.random) {
-  const a = [...manos];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(azar() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-/** Lo que la organizadora se ha ganado en comisiones (de los potes ya entregados). */
-export const comisionGanada = (movs = []) =>
-  movs.filter((m) => m.tipo === 'entrega').reduce((t, m) => t + (m.comision || 0), 0);
+export { aplicarPago, faltaDe };

@@ -107,7 +107,7 @@ export async function registrarVenta({
     recargoCOP: recargoUSD && tasaCOP ? desdeUSD(recargoUSD, 'COP', tasaCOP) : 0,
     credito: plan ? {
       abonoUSD: plan.abonoUSD, recargoPct: Number(credito.recargoPct) || 0, modo: credito.modo || 'unico',
-      semanas: credito.semanas || 0, primerCobro: credito.primerCobro || null,
+      semanas: credito.semanas || 0, primerCobro: credito.primerCobro || null, tipo: credito.tipo || null,
     } : null,
     fiado: !!fiado,
     // Se vendió sin caja abierta: queda escrito en la venta para poder

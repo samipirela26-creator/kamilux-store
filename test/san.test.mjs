@@ -1,55 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { comisionGanada, poteDe, rondasDe, rondaActual, estadoSan, deudaPorPersona, sortear } from '../public/js/core/san.js';
+import { interesPara, planSan, estadoSan, pagarCuota } from '../public/js/core/san.js';
 
-const san = {
-  cuota: 1000, comisionPct: 5, frecuencia: 'semanal', inicio: '2026-11-02',
-  manos: [{ id: 'a', nombre: 'Ana' }, { id: 'b', nombre: 'Berta' }, { id: 'c', nombre: 'Ana' }],
-};
+test('interés: 30% hasta $70 y 50% de ahí en adelante', () => {
+  assert.equal(interesPara(7000), 30);
+  assert.equal(interesPara(7001), 50);
+});
 
-test('pote: cuota por manos menos la comisión', () => {
-  assert.deepEqual(poteDe(san), { bruto: 3000, comision: 150, neto: 2850 });
+test('$100 al 50% en 4 semanas: 4 cuotas de $37,50 y comisión $10', () => {
+  const p = planSan({ montoUSD: 10000, interesPct: 50, cuotas: 4, frecuencia: 'semanal', entrega: '2026-11-06' });
+  assert.deepEqual(p.cuotas.map((c) => c.montoUSD), [3750, 3750, 3750, 3750]);
+  assert.equal(p.deudaUSD, 15000);
+  assert.equal(p.comisionUSD, 1000);
+  assert.deepEqual(p.cuotas.map((c) => c.fecha), ['2026-11-13', '2026-11-20', '2026-11-27', '2026-12-04']);
 });
-test('rondas: una por mano, cada 7 días, en orden', () => {
-  const r = rondasDe(san);
-  assert.deepEqual(r.map((x) => x.fecha), ['2026-11-02', '2026-11-09', '2026-11-16']);
-  assert.equal(r[1].cobra.nombre, 'Berta');
+
+test('quincenal separa las cuotas 15 días', () => {
+  const p = planSan({ montoUSD: 5000, interesPct: 30, cuotas: 2, frecuencia: 'quincenal', entrega: '2026-11-01' });
+  assert.deepEqual(p.cuotas.map((c) => c.fecha), ['2026-11-16', '2026-12-01']);
 });
-test('ronda actual antes, durante y después', () => {
-  assert.equal(rondaActual(san, '2026-11-01'), 0);
-  assert.equal(rondaActual(san, '2026-11-10'), 2);
-  assert.equal(rondaActual(san, '2027-01-01'), 3);
-});
-test('quién debe: falta lo no pagado de las rondas ya llegadas', () => {
-  const movs = [
-    { tipo: 'cuota', ronda: 1, mano: 'a', monto: 1000 },
-    { tipo: 'cuota', ronda: 1, mano: 'b', monto: 400 },
-  ];
-  const e = estadoSan(san, movs, '2026-11-02');
-  assert.deepEqual(e.debe.map((d) => [d.mano.id, d.falta]), [['b', 600], ['c', 1000]]);
-  assert.equal(e.recaudado(1), 1400);
-});
-test('una persona con dos manos suma lo que debe', () => {
-  const e = estadoSan(san, [], '2026-11-02');
-  assert.equal(deudaPorPersona(e).get('Ana'), 2000);
-});
-test('abonos parciales se suman y la entrega se marca', () => {
-  const movs = [
-    { tipo: 'cuota', ronda: 1, mano: 'b', monto: 400 }, { tipo: 'cuota', ronda: 1, mano: 'b', monto: 600 },
-    { tipo: 'entrega', ronda: 1, monto: 2850 },
-  ];
-  const e = estadoSan(san, movs, '2026-11-02');
-  assert.equal(e.pagado[1].b, 1000);
-  assert.equal(e.entregada[1], true);
-});
-test('sortear conserva a todos', () => {
-  const s = sortear(san.manos, () => 0.3);
-  assert.deepEqual(s.map((m) => m.id).sort(), ['a', 'b', 'c']);
-});
-test('la comisión ganada suma solo los potes entregados', () => {
-  assert.equal(comisionGanada([
-    { tipo: 'entrega', ronda: 1, monto: 2850, comision: 150 },
-    { tipo: 'entrega', ronda: 2, monto: 2850, comision: 150 },
-    { tipo: 'cuota', ronda: 3, mano: 'a', monto: 1000 },
-  ]), 300);
+
+test('estado: en qué semana van y qué está vencido', () => {
+  const p = planSan({ montoUSD: 10000, interesPct: 50, cuotas: 4, entrega: '2026-11-06' });
+  const cuotas = pagarCuota(p.cuotas, 1, { VES: 3750 * 10, tasaVES: 1006, fecha: '2026-11-13' });
+  const e = estadoSan(cuotas, '2026-11-25');
+  assert.equal(e.pagadas, 1);
+  assert.equal(e.vaPorLaCuota, 2);
+  assert.equal(e.vencidasUSD, 3750);
+  assert.equal(estadoSan(cuotas, '2026-11-25').saldoUSD, 11250);
 });

@@ -209,14 +209,16 @@ service cloud.firestore {
         allow read, create, update: if delEquipo();
         allow delete: if esDueno();
       }
-      // --- San: es plata ajena y lo lleva el dueño ---
+      // --- San: préstamos de la dueña, aparte de la tienda ---
       match /sanes/{id} {
-        allow read, create, update: if esDueno();
-        allow delete: if esDueno();
+        allow read, create, update, delete: if esDueno();
       }
-      match /san_movs/{id} {
-        allow read, create: if esDueno();
-        allow update, delete: if false;
+      // Espejo para que la persona vea en qué cuota va. Se lee de uno en uno,
+      // por su token (largo y al azar); NO se puede listar. Solo escribe el dueño.
+      match /san_publico/{token} {
+        allow get: if true;
+        allow list: if false;
+        allow write: if esDueno();
       }
       match /abonos/{id} {
         allow read: if delEquipo();

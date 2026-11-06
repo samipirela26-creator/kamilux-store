@@ -25,10 +25,10 @@ export function sumarDias(iso, dias) {
  * @param {number} [p.recargoPct] 10 = 10 %
  * @param {'unico'|'semanal'} [p.modo]
  * @param {number} [p.semanas]   0 = sin cuotas: una sola deuda
- * @param {string} [p.primerCobro] 'YYYY-MM-DD'; las demás van cada 7 días
+ * @param {string} [p.primerCobro] 'YYYY-MM-DD'; las demás van cada `diasEntre` días (7 por defecto)
  */
 export function calcularCredito({
-  totalUSD, abonoUSD = 0, recargoPct = 0, modo = 'unico', semanas = 0, primerCobro = null,
+  totalUSD, abonoUSD = 0, recargoPct = 0, modo = 'unico', semanas = 0, primerCobro = null, diasEntre = 7,
 }) {
   const total = Math.max(0, Math.round(totalUSD || 0));
   const abono = Math.min(total, Math.max(0, Math.round(abonoUSD || 0)));
@@ -63,7 +63,7 @@ export function calcularCredito({
   }
 
   if (!saldo) cuotas.length = 0;
-  if (primerCobro) cuotas.forEach((c, i) => { c.fecha = sumarDias(primerCobro, i * 7); });
+  if (primerCobro) cuotas.forEach((c, i) => { c.fecha = sumarDias(primerCobro, i * diasEntre); });
 
   return { totalUSD: total, abonoUSD: abono, saldoUSD: saldo, recargoUSD: recargo, deudaUSD: saldo + recargo, cuotas };
 }
