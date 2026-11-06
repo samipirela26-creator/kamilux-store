@@ -11,7 +11,7 @@ import { guardarSan, listarSanes, movimientosDe, registrarCuotaSan, registrarEnt
 import { telefonoWA } from './cobros.js';
 
 registrar('san', {
-  titulo: 'San', icono: '💎', soloDueno: true, seccion: 'La plata', orden: 45,
+  titulo: 'San', icono: '💎', menu: true, soloDueno: true, seccion: 'La plata', orden: 11,
   async montar(nodo) {
     const pintarLista = async () => {
       nodo.innerHTML = '<div class="cargando">Cargando Sanes…</div>';
