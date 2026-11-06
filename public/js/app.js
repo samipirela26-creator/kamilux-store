@@ -168,25 +168,28 @@ registrar('panel', {
 
     // --- atajos ---
     nodo.appendChild(el('div.seccion', {}, [el('h2', { texto: 'Atajos' })]));
+    // Lo de todos los días a la vista; lo demás, un toque más abajo. Vender,
+    // Inventario, Reportes y San ya están en la barra de abajo.
     nodo.appendChild(el('div.atajos-grid', {}, [
-      atajo('cart', 'Vender', 'Terminal de venta, cobros en monedas y vuelto.', 'vender'),
-      atajo('search', 'Buscar productos', 'Buscador rápido de artículos y precios.', 'buscar'),
-      atajo('box', 'Inventario', 'Catálogo completo, precios, costos y stock.', 'inventario'),
-      atajo('cart', 'Ventas', 'Una por una: qué se vendió, quién la cobró y a quién.', 'ventas'),
-      atajo('chart', 'Reportes', 'Ganancia por producto y margen flojo.', 'reportes'),
-      atajo('handshake', 'Deudores', 'Quién te debe, cuánto y desde cuándo.', 'clientes'),
       atajo('check', 'Cobros', 'Cuotas atrasadas y las de esta semana, con aviso por WhatsApp.', 'cobros'),
-      atajo('wallet', 'San', 'Grupos de ahorro: rondas, cuotas y quién cobra.', 'san'),
+      atajo('handshake', 'Deudores', 'Quién te debe, cuánto y desde cuándo.', 'clientes'),
+      atajo('cart', 'Ventas', 'Una por una: qué se vendió, quién la cobró y a quién.', 'ventas'),
       atajo('wallet', 'Mi dinero', 'Cuánto gané y cuánto puedo sacar.', 'mi-dinero'),
       atajo('expense', 'Gastos y salidas', 'Salidas de caja por categoría.', 'gastos-dueno'),
       atajo('cash', 'Caja', 'Abrir turno, reporte X y cierre Z.', 'caja-dueno'),
-      atajo('wallet', 'Sueldos', 'Pagar el sueldo y ver si lo que vende cubre lo que cobra.', 'trabajador'),
-      atajo('check', 'Pendientes', 'Lo que tiene que hacer el empleado, y lo que ya marcó hoy.', 'pendientes'),
-      atajo('camera', 'Estudio de fotos', 'Toma fotos directas a los productos.', 'fotos'),
-      atajo('upload', 'Importar Excel', 'Sube catálogo masivo desde hojas de cálculo.', 'importar'),
-      atajoCatalogo(),
-      modoDemo ? null : atajoDemo(),
       atajo('settings', 'Configuración', 'Tasas del día, PIN, usuarios y sinónimos.', 'config'),
+    ]));
+    nodo.appendChild(el('details.mas-atajos', {}, [
+      el('summary', { texto: 'Más opciones' }),
+      el('div.atajos-grid', {}, [
+        atajo('search', 'Buscar productos', 'Buscador rápido de artículos y precios.', 'buscar'),
+        atajo('wallet', 'Sueldos', 'Pagar el sueldo y ver si lo que vende cubre lo que cobra.', 'trabajador'),
+        atajo('check', 'Pendientes', 'Lo que tiene que hacer el empleado, y lo que ya marcó hoy.', 'pendientes'),
+        atajo('camera', 'Estudio de fotos', 'Toma fotos directas a los productos.', 'fotos'),
+        atajo('upload', 'Importar Excel', 'Sube catálogo masivo desde hojas de cálculo.', 'importar'),
+        atajoCatalogo(),
+        modoDemo ? null : atajoDemo(),
+      ]),
     ]));
 
     return dejarDeMirarTasas;

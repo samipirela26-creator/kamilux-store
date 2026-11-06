@@ -74,9 +74,9 @@
 /* Navegación: píldora de papel sólida con los íconos, superficie limpia sin difuminado. */
 .nav {
   position: fixed; z-index: 30;
-  left: 50%; transform: translateX(-50%);
+  left: 0; right: 0; margin-inline: auto;   /* centrada sin transform: no se corre de lado */
   bottom: calc(.85rem + env(safe-area-inset-bottom));
-  width: min(94vw, 460px);
+  width: min(94%, 460px);
   display: flex; align-items: stretch; gap: .2rem;
   padding: .4rem .45rem;
   background: var(--superficie);
@@ -170,3 +170,22 @@
   /* Los avisos ya no tienen que esquivarla. */
   #avisos { bottom: 1.25rem; }
 }
+
+/* Nada en la app se mueve de lado: el contenido nunca es más ancho que la pantalla. */
+html, body { max-width: 100%; overflow-x: hidden; overscroll-behavior-x: none; }
+#contenido { overflow-x: clip; }
+
+/* En teléfono, Vender solo lleva el ícono: así los otros cuatro botones caben con su nombre. */
+@media (max-width: 520px) {
+  .nav button { font-size: .72rem; }
+  .nav button.destacado { padding: 0 1rem; }
+  .nav button.destacado > span:last-child { display: none; }
+}
+
+.mas-atajos { margin-top: 1rem; }
+.mas-atajos summary {
+  cursor: pointer; list-style: none; padding: .7rem 1rem; text-align: center;
+  border: 1px dashed var(--borde); border-radius: var(--pildora); color: var(--texto-suave); font-weight: 600;
+}
+.mas-atajos summary::-webkit-details-marker { display: none; }
+.mas-atajos[open] summary { margin-bottom: .75rem; }

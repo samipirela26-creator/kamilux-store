@@ -73,7 +73,7 @@
 .btn.grande { min-height: 54px; font-size: 1rem; }
 
 /* Chips de 1-Clic para POS y filtros: el activo se llena de turquesa. */
-.chips-barra { display: flex; gap: .4rem; overflow-x: auto; padding: .35rem 0 .15rem; scrollbar-width: none; }
+.chips-barra { display: flex; gap: .4rem; flex-wrap: wrap; padding: .35rem 0 .15rem; scrollbar-width: none; }
 .chips-barra::-webkit-scrollbar { display: none; }
 .chip {
   flex: 0 0 auto; display: inline-flex; align-items: center; gap: .35rem;
